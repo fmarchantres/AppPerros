@@ -1,6 +1,27 @@
-<h2>Login</h2>
-<form method="post">
- {% csrf_token %}
- {{ form.as_p }}
- <button type="submit">Iniciar sesión</button>
-</form>
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="{% static 'perros/css/estilos.css' %}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Iniciar sesión</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Entrar</button>
+    </form>
+
+    <p>
+        ¿No tienes cuenta?
+        <a href="/registro/">Regístrate</a>
+    </p>
+</div>
+
+</body>
+</html>
