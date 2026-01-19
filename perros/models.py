@@ -33,16 +33,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         is_staff = models.BooleanField(default=False)
         objects = UserManager()
 
-        USERNAME_FIELD = 'username'
-        REQUIRED_FIELDS = ['mail', 'role']
+        USERNAME_FIELD = 'mail'
+        REQUIRED_FIELDS = ['username', 'role']
 
         def __str__(self):
             return self.username
 
 
-
 #MONGODB MODELOS
-
 #RAZA
 class Raza(models.Model):
     code = models.IntegerField(unique=True)

@@ -14,6 +14,10 @@ body {
 }
 
 
+/*BACKGROUND COLOR:
+background: #FED336;
+background: linear-gradient(90deg, rgba(254, 211, 54, 1) 0%, rgba(1, 195, 124, 1) 50%, rgba(220, 105, 42, 1) 100%);*/
+
 .container {
     width: 350px;
     padding: 25px;
@@ -71,7 +75,6 @@ a {
     text-decoration: none;
 }
 
-/* Quitar márgenes raros que mete Django con form.as_p */
 form p {
     display: block;
     margin: 0 0 15px 0;
@@ -81,11 +84,25 @@ form p {
     text-align: center;
 }
 
-/* Asegurar que inputs están bien centrados */
 form input {
     display: block;
     align-content: center;
     align-items: center;
     text-align: center;
     margin-left: -8px;
+}
+
+.img-perro {
+    height: 200px;
+    object-fit: cover;
+}
+
+.card-title {
+    min-height: 3.5rem;   /* ajusta si quieres */
+    line-height: 1.2;
+}
+
+h2.card-title {
+    min-height: 5.5rem;   /* ajustable */
+    line-height: 1.2;
 }

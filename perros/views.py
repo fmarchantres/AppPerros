@@ -1,4 +1,4 @@
-
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from pymongo import MongoClient
@@ -20,6 +20,11 @@ def mostrar_razas(request):
     lista_razas = Raza.objects.all()
     return render (request, 'razas.html')
 
+
+@login_required(login_url='login') #PROTECCION AL LOGIN
+def inicio(request):
+    perros = list(collection.find({},{"_id":0}))
+    return render (request, 'inicio.html', {'perros': perros})
 
 
 def registrar_usuario(request):
@@ -44,7 +49,7 @@ def login_usuario(request):
             usuario = authenticate (request, username=username, password=password)
             if usuario is not None:
                 login (request, usuario)
-                return redirect('inicio')
+                return redirect('/')
 
     else:
             form = LoginForm()
