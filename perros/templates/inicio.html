@@ -14,38 +14,30 @@
 
     <!-- CABECERA -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Bienvenido</h2>
         <a href="{% url 'logout' %}" class="btn btn-outline-danger">Cerrar sesión</a>
     </div>
 
     <!-- GRID DE CARDS -->
     <div class="row">
 
-        {% for perro in perros %}
+        {% for perro in page_obj %}
             <div class="col-md-4 mb-4">
 
-                <div class="card h-100">
-                    <img src="{{ perro.image_url }}"
-                         class="card-img-top img-perro"
-                         alt="{{ perro.name }}"
-                         style="cursor: pointer;"
-                         data-bs-toggle="modal"
-                         data-bs-target="#modal{{ perro.code }}">
+                <div class="card h-100 text-center">
+
+                    <a href="{% url 'detalle_perro' perro.code %}">
+                        <img src="{{ perro.image_url }}"
+                             class="card-img-top img-perro"
+                             alt="{{ perro.name }}">
+                    </a>
 
 
                     <div class="card-body">
-
-                        <h2 class="card-title">{{ perro.name }}</h2>
-
-                        <p class="card-text text-start">
-                            <strong>Grupo:</strong> {{ perro.breed_group }} <br>
-                            <strong>Origen:</strong> {{ perro.origin }} <br>
-                            <strong>Vida:</strong> {{ perro.life_span }} <br>
-                            <strong>Temperamento:</strong> {{ perro.temperament }}
-                        </p>
-
+                        <h5 class="card-title">{{ perro.name }}</h5>
                     </div>
+
                 </div>
+
 
             </div>
 
@@ -70,8 +62,69 @@
         {% endfor %}
 
     </div>
-</div>
+    <!-- PAGINACIÓN -->
+    <nav aria-label="Paginación perros">
+        <ul class="pagination justify-content-center">
 
+            <!-- ANTERIOR -->
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                        Anterior
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Anterior</span>
+                </li>
+            {% endif %}
+
+            <!-- NÚMEROS -->
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- SIGUIENTE -->
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                        Siguiente
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Siguiente</span>
+                </li>
+            {% endif %}
+
+            <!-- ÚLTIMA -->
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.paginator.num_pages }}">
+                        Última
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Última</span>
+                </li>
+            {% endif %}
+
+
+        </ul>
+    </nav>
+
+
+</div>
 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -1,5 +1,5 @@
 from django.urls import path
-from perros.views import listar_perros, mostrar_razas, login_usuario, registrar_usuario, inicio, logout_usuario
+from perros.views import listar_perros, mostrar_razas, login_usuario, registrar_usuario, inicio, logout_usuario, detalle_perro
 
 urlpatterns = [
     path('perros/', listar_perros),
@@ -13,4 +13,6 @@ urlpatterns = [
     path('', inicio, name="inicio"),
 
     path ('logout/', logout_usuario, name="logout"),
+
+    path ('perro/<int:code>/', detalle_perro, name="detalle_perro"),
 ]
