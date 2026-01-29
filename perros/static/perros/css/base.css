@@ -1,0 +1,16 @@
+.img-perro {
+    height: 220px;
+    width: 100%;
+    object-fit: cover;
+}
+
+.card-title {
+    min-height: 3.5rem;
+}
+
+.detalle-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

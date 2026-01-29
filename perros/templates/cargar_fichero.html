@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container mt-5 d-flex justify-content-center">
+        <div class="card shadow" style="max-width: 500px;">
+            <div class="card-body text-center">
+                <h5 class="card-title">Carga de datos</h5>
+
+                <p class="card-text">
+                    Desde aquí podrás añadir tu fichero CSV o JSON con los datos de los perros.
+                </p>
+
+                <button class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalSubida">
+                    Añadir CSV / JSON
+                </button>
+
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalSubida" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="post" enctype="multipart/form-data"
+                      action="{% url 'subir_fichero' %}">
+                    {% csrf_token %}
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Subir fichero</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p>Selecciona un fichero CSV o JSON.</p>
+
+                        <input type="file"
+                               name="fichero"
+                               class="form-control"
+                               accept=".csv,.json"
+                               required>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit" class="btn btn-primary">
+                            Subir fichero
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}
