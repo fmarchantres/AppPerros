@@ -84,7 +84,10 @@ def detalle_perro(request, code):
     return render(request, 'detalle_perro.html', {'perro': perro})
 
 
+#@login_required
 def cargar_fichero(request):
+    if request.user.role != 'admin':
+        return HttpResponseForbidden("No autorizado")
     return render(request, "cargar_fichero.html")
 
 
