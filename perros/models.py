@@ -84,3 +84,44 @@ class Ranking (models.Model):
 
     def __str__(self):
         return self.nombre
+
+#CATEGORIA
+class Category(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+#VALOR CATEGORIA
+class CategoryValue(models.Model):
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name='values'
+    )
+    value = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = ('category', 'value')
+
+    def __str__(self):
+        return f"{self.category.name} - {self.value}"
+
+class Raza(models.Model):
+    code = models.IntegerField(unique=True)
+    name = models.CharField(max_length=100)
+
+    group_id = models.IntegerField(null=True)
+    origin_id = models.IntegerField(null=True)
+    life_span_id = models.IntegerField(null=True)
+    temperament_ids = models.JSONField(null=True, blank=True)
+
+    image_url = models.URLField(max_length=800)
+
+    class Meta:
+        managed = False
+        db_table = 'razas'
+
+    def __str__(self):
+        return self.name

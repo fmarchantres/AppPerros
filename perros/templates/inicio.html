@@ -7,91 +7,197 @@
 
 <div class="bg-white p-4 rounded shadow-sm">
 
-    <!-- GRID DE CARDS -->
     <div class="row">
 
-        {% for perro in page_obj %}
-            <div class="col-md-4 mb-4">
+        <!-- ===================== -->
+        <!-- COLUMNA FILTROS -->
+        <!-- ===================== -->
 
-                <div class="card h-100 text-center">
+        <div class="col-md-3">
 
-                    <a href="{% url 'detalle_perro' perro.code %}">
-                        <img src="{{ perro.image_url }}"
-                             class="card-img-top img-perro"
-                             alt="{{ perro.name }}">
-                    </a>
+            <form method="get">
 
-                    <div class="card-body">
-                        <h5 class="card-title">{{ perro.name }}</h5>
-                    </div>
-
+                <!-- ORIGEN -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Origen</label>
+                    <select name="origin" class="form-select">
+                        <option value="">Todos</option>
+                        {% for o in origenes %}
+                            <option value="{{ o.id }}"
+                                {% if request.GET.origin == o.id|stringformat:"s" %}selected{% endif %}>
+                                {{ o.value }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
 
+                <!-- GRUPO -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Grupo</label>
+                    <select name="group" class="form-select">
+                        <option value="">Todos</option>
+                        {% for g in grupos %}
+                            <option value="{{ g.id }}"
+                                {% if request.GET.group == g.id|stringformat:"s" %}selected{% endif %}>
+                                {{ g.value }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- ESPERANZA DE VIDA -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Esperanza de vida</label>
+
+                    {% for v in vidas %}
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="life"
+                                   id="life{{ v.id }}"
+                                   value="{{ v.id }}"
+                                   {% if request.GET.life == v.id|stringformat:"s" %}checked{% endif %}>
+                            <label class="form-check-label" for="life{{ v.id }}">
+                                {{ v.value }}
+                            </label>
+                        </div>
+                    {% endfor %}
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input"
+                               type="radio"
+                               name="life"
+                               id="lifeAll"
+                               value=""
+                               {% if not request.GET.life %}checked{% endif %}>
+                        <label class="form-check-label" for="lifeAll">
+                            Todos
+                        </label>
+                    </div>
+                </div>
+
+                <!-- TEMPERAMENTO -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Temperamento</label>
+
+                    {% for t in temperamentos %}
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   name="temperament"
+                                   id="temp{{ t.id }}"
+                                   value="{{ t.id }}"
+                                   {% if t.id|stringformat:"s" in selected_temperaments %}checked{% endif %}>
+                            <label class="form-check-label" for="temp{{ t.id }}">
+                                {{ t.value }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    Filtrar
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- ===================== -->
+        <!-- COLUMNA GRID -->
+        <!-- ===================== -->
+
+        <div class="col-md-9">
+
+            <!-- GRID DE CARDS -->
+            <div class="row">
+
+                {% for perro in page_obj %}
+                    <div class="col-md-4 mb-4">
+
+                        <div class="card h-100 text-center">
+
+                            <a href="{% url 'detalle_perro' perro.code %}">
+                                <img src="{{ perro.image_url }}"
+                                     class="card-img-top img-perro"
+                                     alt="{{ perro.name }}">
+                            </a>
+
+                            <div class="card-body">
+                                <h5 class="card-title">{{ perro.name }}</h5>
+                            </div>
+
+                        </div>
+
+                    </div>
+                {% endfor %}
+
             </div>
-        {% endfor %}
 
-    </div>
+            <!-- PAGINACIÓN -->
+            <nav aria-label="Paginación perros">
+                <ul class="pagination justify-content-center">
 
-    <!-- PAGINACIÓN -->
-    <nav aria-label="Paginación perros">
-        <ul class="pagination justify-content-center">
+                    <!-- ANTERIOR -->
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                Anterior
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Anterior</span>
+                        </li>
+                    {% endif %}
 
-            <!-- ANTERIOR -->
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                        Anterior
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">Anterior</span>
-                </li>
-            {% endif %}
+                    <!-- NÚMEROS -->
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
 
-            <!-- NÚMEROS -->
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% else %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
+                    <!-- SIGUIENTE -->
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                Siguiente
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Siguiente</span>
+                        </li>
+                    {% endif %}
 
-            <!-- SIGUIENTE -->
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                        Siguiente
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">Siguiente</span>
-                </li>
-            {% endif %}
+                    <!-- ÚLTIMA -->
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_obj.paginator.num_pages }}">
+                                Última
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Última</span>
+                        </li>
+                    {% endif %}
 
-            <!-- ÚLTIMA -->
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link"
-                       href="?page={{ page_obj.paginator.num_pages }}">
-                        Última
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">Última</span>
-                </li>
-            {% endif %}
+                </ul>
+            </nav>
 
-        </ul>
-    </nav>
+        </div> <!-- col-md-9 -->
 
-</div>
+    </div> <!-- row -->
+
+</div> <!-- bg-white -->
 
 {% endblock %}

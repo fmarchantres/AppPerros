@@ -44,10 +44,42 @@
 
                     <h2 class="card-title mb-3">{{ perro.name }}</h2>
 
-                    <p><strong>Grupo:</strong> {{ perro.breed_group }}</p>
-                    <p><strong>Origen:</strong> {{ perro.origin }}</p>
-                    <p><strong>Vida:</strong> {{ perro.life_span }}</p>
-                    <p><strong>Temperamento:</strong> {{ perro.temperament }}</p>
+                    <hr>
+
+                    <p><strong>Grupo (categoría):</strong>
+                        {% if group %}
+                            {{ group.value }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </p>
+
+                    <p><strong>Origen (categoría):</strong>
+                        {% if origin %}
+                            {{ origin.value }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </p>
+
+                    <p><strong>Esperanza de vida (categoría):</strong>
+                        {% if life_span %}
+                            {{ life_span.value }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </p>
+
+                    <p><strong>Temperamento (categoría):</strong>
+                        {% if temperaments %}
+                            {% for t in temperaments %}
+                                <span class="badge bg-secondary">{{ t.value }}</span>
+                            {% endfor %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </p>
+
 
                 </div>
 

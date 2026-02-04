@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Valores de {{ category.name }}</h2>
+
+  <a href="{% url 'category_value_create' category.id %}"
+     class="btn btn-primary mb-3">
+    + Nuevo valor
+  </a>
+
+  <ul class="list-group">
+    {% for v in values %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        {{ v.value }}
+        <div>
+          <a href="{% url 'category_value_update' v.id %}"
+             class="btn btn-sm btn-warning">Editar</a>
+          <a href="{% url 'category_value_delete' v.id %}"
+             class="btn btn-sm btn-danger">Eliminar</a>
+        </div>
+      </li>
+    {% empty %}
+      <li class="list-group-item">No hay valores</li>
+    {% endfor %}
+  </ul>
+
+  <a href="{% url 'categorias_list' %}" class="btn btn-secondary mt-3">
+    ← Volver a categorías
+  </a>
+</div>
+{% endblock %}

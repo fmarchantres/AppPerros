@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>
+    {% if value_obj %}Editar{% else %}Nuevo{% endif %}
+    valor{% if value_obj %} ({{ value_obj.category.name }}){% endif %}
+  </h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Valor</label>
+      <input type="text" name="value" class="form-control"
+             value="{{ value_obj.value|default:'' }}" required>
+    </div>
+
+    <button type="submit" class="btn btn-success">Guardar</button>
+    <a href="{% if value_obj %}
+                {% url 'category_values_list' value_obj.category.id %}
+             {% else %}
+                {% url 'categorias_list' %}
+             {% endif %}"
+       class="btn btn-secondary">
+      Cancelar
+    </a>
+  </form>
+</div>
+{% endblock %}
