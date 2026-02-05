@@ -23,9 +23,9 @@
                     <select name="origin" class="form-select">
                         <option value="">Todos</option>
                         {% for o in origenes %}
-                            <option value="{{ o.id }}"
-                                {% if request.GET.origin == o.id|stringformat:"s" %}selected{% endif %}>
-                                {{ o.value }}
+                            <option value="{{ o }}"
+                                {% if request.GET.origin == o %}selected{% endif %}>
+                                {{ o }}
                             </option>
                         {% endfor %}
                     </select>
@@ -37,9 +37,9 @@
                     <select name="group" class="form-select">
                         <option value="">Todos</option>
                         {% for g in grupos %}
-                            <option value="{{ g.id }}"
-                                {% if request.GET.group == g.id|stringformat:"s" %}selected{% endif %}>
-                                {{ g.value }}
+                            <option value="{{ g }}"
+                                {% if request.GET.group == g %}selected{% endif %}>
+                                {{ g }}
                             </option>
                         {% endfor %}
                     </select>
@@ -54,11 +54,11 @@
                             <input class="form-check-input"
                                    type="radio"
                                    name="life"
-                                   id="life{{ v.id }}"
-                                   value="{{ v.id }}"
-                                   {% if request.GET.life == v.id|stringformat:"s" %}checked{% endif %}>
-                            <label class="form-check-label" for="life{{ v.id }}">
-                                {{ v.value }}
+                                   id="life{{ forloop.counter }}"
+                                   value="{{ v }}"
+                                   {% if request.GET.life == v %}checked{% endif %}>
+                            <label class="form-check-label" for="life{{ forloop.counter }}">
+                                {{ v }}
                             </label>
                         </div>
                     {% endfor %}
@@ -85,11 +85,11 @@
                             <input class="form-check-input"
                                    type="checkbox"
                                    name="temperament"
-                                   id="temp{{ t.id }}"
-                                   value="{{ t.id }}"
-                                   {% if t.id|stringformat:"s" in selected_temperaments %}checked{% endif %}>
-                            <label class="form-check-label" for="temp{{ t.id }}">
-                                {{ t.value }}
+                                   id="temp{{ forloop.counter }}"
+                                   value="{{ t }}"
+                                   {% if request.GET.temperament == t %}checked{% endif %}>
+                            <label class="form-check-label" for="temp{{ forloop.counter }}">
+                                {{ t }}
                             </label>
                         </div>
                     {% endfor %}
@@ -138,7 +138,6 @@
             <nav aria-label="Paginación perros">
                 <ul class="pagination justify-content-center">
 
-                    <!-- ANTERIOR -->
                     {% if page_obj.has_previous %}
                         <li class="page-item">
                             <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
@@ -151,7 +150,6 @@
                         </li>
                     {% endif %}
 
-                    <!-- NÚMEROS -->
                     {% for num in page_obj.paginator.page_range %}
                         {% if page_obj.number == num %}
                             <li class="page-item active">
@@ -164,7 +162,6 @@
                         {% endif %}
                     {% endfor %}
 
-                    <!-- SIGUIENTE -->
                     {% if page_obj.has_next %}
                         <li class="page-item">
                             <a class="page-link" href="?page={{ page_obj.next_page_number }}">
@@ -177,7 +174,6 @@
                         </li>
                     {% endif %}
 
-                    <!-- ÚLTIMA -->
                     {% if page_obj.has_next %}
                         <li class="page-item">
                             <a class="page-link"
@@ -194,10 +190,10 @@
                 </ul>
             </nav>
 
-        </div> <!-- col-md-9 -->
+        </div>
 
-    </div> <!-- row -->
+    </div>
 
-</div> <!-- bg-white -->
+</div>
 
 {% endblock %}

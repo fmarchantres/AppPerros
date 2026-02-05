@@ -4,7 +4,7 @@
 <div class="container mt-4">
   <h2>
     {% if value_obj %}Editar{% else %}Nuevo{% endif %}
-    valor{% if value_obj %} ({{ value_obj.category.name }}){% endif %}
+    valor{% if category %} ({{ category.name }}){% endif %}
   </h2>
 
   <form method="post">
@@ -16,8 +16,9 @@
     </div>
 
     <button type="submit" class="btn btn-success">Guardar</button>
-    <a href="{% if value_obj %}
-                {% url 'category_values_list' value_obj.category.id %}
+
+    <a href="{% if category %}
+                {% url 'category_values_list' category._id|stringformat:"s" %}
              {% else %}
                 {% url 'categorias_list' %}
              {% endif %}"

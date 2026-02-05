@@ -11,9 +11,7 @@
 
 <body>
 
-
 <div class="detalle-wrapper">
-
 
     <div class="card detalle-card shadow-sm">
         <div class="row g-0 h-100">
@@ -37,7 +35,6 @@
 
             </div>
 
-
             <!-- INFO -->
             <div class="col-md-7">
                 <div class="card-body text-start">
@@ -46,50 +43,39 @@
 
                     <hr>
 
-                    <p><strong>Grupo (categoría):</strong>
-                        {% if group %}
-                            {{ group.value }}
-                        {% else %}
-                            -
-                        {% endif %}
+                    <p>
+                        <strong>Grupo:</strong>
+                        {{ perro.breed_group|default:"-" }}
                     </p>
 
-                    <p><strong>Origen (categoría):</strong>
-                        {% if origin %}
-                            {{ origin.value }}
-                        {% else %}
-                            -
-                        {% endif %}
+                    <p>
+                        <strong>Origen:</strong>
+                        {{ perro.origin|default:"-" }}
                     </p>
 
-                    <p><strong>Esperanza de vida (categoría):</strong>
-                        {% if life_span %}
-                            {{ life_span.value }}
-                        {% else %}
-                            -
-                        {% endif %}
+                    <p>
+                        <strong>Esperanza de vida:</strong>
+                        {{ perro.life_span_category|default:"-" }}
                     </p>
 
-                    <p><strong>Temperamento (categoría):</strong>
-                        {% if temperaments %}
-                            {% for t in temperaments %}
-                                <span class="badge bg-secondary">{{ t.value }}</span>
+                    <p>
+                        <strong>Temperamento:</strong>
+                        {% if perro.temperaments %}
+                            {% for t in perro.temperaments %}
+                                <span class="badge bg-secondary">{{ t }}</span>
                             {% endfor %}
                         {% else %}
                             -
                         {% endif %}
                     </p>
 
-
                 </div>
-
             </div>
 
         </div>
     </div>
 
 </div>
-
 
 </body>
 </html>

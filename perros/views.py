@@ -1,187 +1,78 @@
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect
-from pymongo import MongoClient
 from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
-from django.contrib.auth.decorators import user_passes_test
-from .models import Category
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import Category, CategoryValue
+from django.contrib import messages
+from bson import ObjectId
 
-
-
+from pymongo import MongoClient
 import csv
 import json
-
-from django.shortcuts import redirect
-from django.contrib import messages
-
-
 
 from perros.forms import RegistroForm, LoginForm
 from perros.models import *
 
-client = MongoClient('mongodb://localhost:27017/')
-db = client['dogs']
-collection = db['dogs']
+# ==============================
+# MongoDB
+# ==============================
+client = MongoClient("mongodb://localhost:27017/")
+db = client["dogs"]
+dogs_col = db["dogs"]
+categories_col = db["categories"]
+values_col = db["category_values"]
+category_values_col = db["category_values"]
 
 
-#HELPER DE PERMISOS
+# ==============================
+# HELPERS
+# ==============================
 def is_admin(user):
-    return user.is_authenticated and user.role == 'admin'
-
-#LISTAR CATEGORIAS
-@user_passes_test(is_admin)
-def categorias_list(request):
-    categorias = Category.objects.all().order_by('name')
-    return render(request, 'categorias/list.html', {'categorias': categorias})
-
-#CREAR CATEGORIA
-@user_passes_test(is_admin)
-def categoria_create(request):
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        if name:
-            Category.objects.get_or_create(name=name)
-        return redirect('categorias_list')
-    return render(request, 'categorias/form.html')
-
-#EDITAR CATEGORIA
-@user_passes_test(is_admin)
-def categoria_update(request, pk):
-    categoria = get_object_or_404(Category, pk=pk)
-
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        if name:
-            categoria.name = name
-            categoria.save()
-        return redirect('categorias_list')
-
-    return render(request, 'categorias/form.html', {'categoria': categoria})
-
-#ELIMINAR CATEGORIA
-@user_passes_test(is_admin)
-def categoria_delete(request, pk):
-    categoria = get_object_or_404(Category, pk=pk)
-    categoria.delete()
-    return redirect('categorias_list')
-
-#LISTAR VALORES DE UNA CATEGORIA
-@user_passes_test(is_admin)
-def category_values_list(request, category_id):
-    category = get_object_or_404(Category, id=category_id)
-    values = category.values.all().order_by('value')
-
-    return render(
-        request,
-        'categorias/values_list.html',
-        {'category': category, 'values': values}
-    )
-
-#CREAR VALOR
-@user_passes_test(is_admin)
-def category_value_create(request, category_id):
-    category = get_object_or_404(Category, id=category_id)
-
-    if request.method == 'POST':
-        value = request.POST.get('value')
-        if value:
-            CategoryValue.objects.get_or_create(
-                category=category,
-                value=value
-            )
-        return redirect('category_values_list', category_id=category.id)
-
-    return render(
-        request,
-        'categorias/value_form.html',
-        {'category': category}
-    )
-
-#EDITAR VALOR
-@user_passes_test(is_admin)
-def category_value_update(request, pk):
-    value_obj = get_object_or_404(CategoryValue, pk=pk)
-
-    if request.method == 'POST':
-        value = request.POST.get('value')
-        if value:
-            value_obj.value = value
-            value_obj.save()
-        return redirect(
-            'category_values_list',
-            category_id=value_obj.category.id
-        )
-
-    return render(
-        request,
-        'categorias/value_form.html',
-        {'value_obj': value_obj}
-    )
-
-#ELIMINAR VALOR
-@user_passes_test(is_admin)
-def category_value_delete(request, pk):
-    value_obj = get_object_or_404(CategoryValue, pk=pk)
-    category_id = value_obj.category.id
-    value_obj.delete()
-    return redirect('category_values_list', category_id=category_id)
+    return user.is_authenticated and user.role == "admin"
 
 
+# ==============================
+# API SIMPLE
+# ==============================
 def listar_perros(request):
-    perros = list(collection.find({}, {"_id": 0}))
+    perros = list(dogs_col.find({}, {"_id": 0}))
     return JsonResponse(perros, safe=False)
 
 
-def mostrar_razas(request):
-    lista_razas = Raza.objects.all()
-    return render(request, 'razas.html')
-
-
-# @login_required(login_url='login') #PROTECCION AL LOGIN
+# ==============================
+# HOME + FILTROS (SOLO MONGO)
+# ==============================
 def inicio(request):
-    client = MongoClient("mongodb://localhost:27017/")
-    collection = client["dogs"]["dogs"]
-
     query = {}
-    #GRUPO
-    group_id = request.GET.get("group")
-    if group_id:
-        query["group_id"] = int(group_id)
 
-    #ORIGEN
-    origin_id = request.GET.get("origin")
-    if origin_id:
-        query["origin_id"] = int(origin_id)
+    origin = request.GET.get("origin")
+    group = request.GET.get("group")
+    life_span = request.GET.get("life")
+    temperament = request.GET.get("temperament")
 
-    # ESPERANZA DE VIDA
-    life_id = request.GET.get("life")
-    if life_id:
-        query["life_span_id"] = int(life_id)
+    if origin:
+        query["origin"] = origin
 
-    # TEMPERAMENTO (multi)
-    temperament_ids = request.GET.getlist("temperament")
-    if temperament_ids:
-        query["temperament_ids"] = {"$all": [int(t) for t in temperament_ids]}
+    if group:
+        query["breed_group"] = group
 
-    perros = list(collection.find(query, {"_id": 0}))
+    if life_span:
+        query["life_span_category"] = life_span
 
-    # paginación (deja tu lógica actual)
+    if temperament:
+        query["temperaments"] = temperament  # array → match directo
+
+    perros = list(dogs_col.find(query, {"_id": 0}))
+
     paginator = Paginator(perros, 9)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # valores de origen
-    categoria_origen = Category.objects.get(name__iexact="Origen")
-    origenes = CategoryValue.objects.filter(category=categoria_origen).order_by("value")
-    categoria_grupo = Category.objects.get(name__iexact="Grupo")
-    grupos = CategoryValue.objects.filter(category=categoria_grupo).order_by("value")
-    categoria_vida = Category.objects.get(name__iexact="Esperanza de vida")
-    vidas = CategoryValue.objects.filter(category=categoria_vida).order_by("value")
-    categoria_temp = Category.objects.get(name__iexact="Temperamento")
-    temperamentos = CategoryValue.objects.filter(category=categoria_temp).order_by("value")
+    # Valores únicos para filtros (desde Mongo)
+    origenes = sorted(dogs_col.distinct("origin"))
+    grupos = sorted(dogs_col.distinct("breed_group"))
+    vidas = sorted(dogs_col.distinct("life_span_category"))
+    temperamentos = sorted(dogs_col.distinct("temperaments"))
 
     return render(request, "inicio.html", {
         "page_obj": page_obj,
@@ -192,137 +83,326 @@ def inicio(request):
     })
 
 
+# ==============================
+# DETALLE (SOLO MONGO)
+# ==============================
+def detalle_perro(request, code):
+    perro = dogs_col.find_one({"code": code}, {"_id": 0})
+
+    if not perro:
+        return render(request, "404.html", status=404)
+
+    return render(request, "detalle_perro.html", {
+        "perro": perro
+    })
+
+
+
+# ==============================
+# USUARIOS
+# ==============================
 def registrar_usuario(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = RegistroForm(request.POST)
         if form.is_valid():
             usuario = form.save(commit=False)
-            usuario.set_password(form.cleaned_data['password'])
+            usuario.set_password(form.cleaned_data["password"])
             usuario.save()
-            return redirect('login')
+            return redirect("login")
     else:
         form = RegistroForm()
-    return render(request, 'usuarios/registro.html', {'form': form})
+    return render(request, "usuarios/registro.html", {"form": form})
 
 
 def login_usuario(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
+            username = form.cleaned_data["username"]
+            password = form.cleaned_data["password"]
             usuario = authenticate(request, username=username, password=password)
-            if usuario is not None:
+            if usuario:
                 login(request, usuario)
-                return redirect('/')
-
+                return redirect("/")
     else:
         form = LoginForm()
-    return render(request, 'usuarios/login.html', {'form': form})
+    return render(request, "usuarios/login.html", {"form": form})
 
 
 def logout_usuario(request):
     logout(request)
-    return redirect('login')
+    return redirect("login")
 
 
-def detalle_perro(request, code):
-    perro = collection.find_one({'code': code}, {'_id': 0})
-
-    group = None
-    origin = None
-    life_span = None
-    temperaments = []
-
-    if perro:
-        if perro.get('group_id'):
-            group = CategoryValue.objects.filter(id=perro['group_id']).first()
-
-        if perro.get('origin_id'):
-            origin = CategoryValue.objects.filter(id=perro['origin_id']).first()
-
-        if perro.get('life_span_id'):
-            life_span = CategoryValue.objects.filter(id=perro['life_span_id']).first()
-
-        if perro.get('temperament_ids'):
-            temperaments = CategoryValue.objects.filter(
-                id__in=perro['temperament_ids']
-            )
-
-    context = {
-        'perro': perro,
-        'group': group,
-        'origin': origin,
-        'life_span': life_span,
-        'temperaments': temperaments,
-    }
-
-    return render(request, 'detalle_perro.html', context)
-
-
-#@login_required
+# ==============================
+# CARGA DE FICHEROS (ADMIN)
+# ==============================
+@user_passes_test(is_admin)
 def cargar_fichero(request):
-    if request.user.role != 'admin':
-        return HttpResponseForbidden("No autorizado")
     return render(request, "cargar_fichero.html")
 
 
+@user_passes_test(is_admin)
 def subir_fichero(request):
-    if request.method == 'POST' and request.FILES.get("fichero"):
-        fichero = request.FILES.get("fichero")
+    if request.method == "POST" and request.FILES.get("fichero"):
+        fichero = request.FILES["fichero"]
         nombre = fichero.name.lower()
+
         try:
-
-            client = MongoClient('mongodb://localhost:27017/')
-            db = client['dogs']
-            collection = db['dogs']
-
             # JSON
             if nombre.endswith(".json"):
                 data = json.load(fichero)
                 for doc in data:
                     doc.pop("_id", None)
-                collection.insert_many(data)
-                total = len(data)
-                messages.success(request, f"Fichero JSON leído correctamente ({total} registros).")
+                dogs_col.insert_many(data)
+                messages.success(request, f"JSON cargado ({len(data)} registros).")
 
-                # CSV
+            # CSV
             elif nombre.endswith(".csv"):
                 contenido = fichero.read().decode("utf-8").splitlines()
                 reader = csv.DictReader(contenido)
 
                 data = []
                 for row in reader:
-                    clean_row = {}
+                    clean = {}
                     for k, v in row.items():
                         if isinstance(v, str):
                             v = v.strip()
                         if k == "code":
                             v = int(v)
-                        clean_row[k] = v
+                        clean[k] = v
+                    data.append(clean)
 
-                    data.append(clean_row)
-
-                collection.insert_many(data)
-
-                messages.success(
-                    request,
-                    f"Fichero CSV leído correctamente ({len(data)} registros)."
-                )
-
-
+                dogs_col.insert_many(data)
+                messages.success(request, f"CSV cargado ({len(data)} registros).")
 
             else:
-                messages.error(
-                    request,
-                    "Formato no válido. Solo se permiten CSV o JSON."
-                )
-                return redirect("cargar_fichero")
+                messages.error(request, "Formato no válido (CSV o JSON).")
 
         except Exception as e:
-            messages.error(
-                request,
-                f"Error al leer el fichero: {e}"
-            )
+            messages.error(request, f"Error: {e}")
 
     return redirect("cargar_fichero")
+
+# ==============================
+# CATEGORÍAS (ADMIN - MONGO)
+# ==============================
+#@user_passes_test(is_admin)
+def categorias_list(request):
+    categorias = []
+
+    for cat in categories_col.find():
+        categorias.append({
+            "id": str(cat["_id"]),
+            "name": cat["name"],
+            "slug": cat.get("slug")
+        })
+
+    return render(
+        request,
+        "categorias/list.html",
+        {
+            "categorias": categorias
+        }
+    )
+
+
+# ==============================
+#        CREAR CATEGORÍAS
+# ==============================
+#@user_passes_test(is_admin)
+def categoria_create(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+
+        if name:
+            slug = name.lower().replace(" ", "_")
+
+            categories_col.insert_one({
+                "name": name,
+                "slug": slug
+            })
+
+        return redirect("categorias_list")
+
+    return render(request, "categorias/form.html")
+
+
+
+# ==============================
+# CATEGORÍAS MOSTRAR VALORES
+# ==============================
+#@user_passes_test(is_admin)
+def category_values_list(request, category_id):
+    # Buscar categoría
+    category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
+
+    if not category_doc:
+        return redirect("categorias_list")
+
+    category = {
+        "id": str(category_doc["_id"]),
+        "name": category_doc["name"],
+        "slug": category_doc.get("slug")
+    }
+
+    # Buscar valores asociados
+    values = []
+    for v in category_values_col.find({"category_slug": category["slug"]}):
+        values.append({
+            "id": str(v["_id"]),
+            "value": v["value"]
+        })
+
+    return render(
+        request,
+        "categorias/values_list.html",
+        {
+            "category": category,
+            "values": values
+        }
+    )
+
+# ==============================
+#    ACTUALIZAR CATEGORÍAS
+# ==============================
+#@user_passes_test(is_admin)
+def categoria_update(request, category_id):
+    category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
+
+    if not category_doc:
+        return redirect("categorias_list")
+
+    categoria = {
+        "id": str(category_doc["_id"]),
+        "name": category_doc["name"],
+        "slug": category_doc.get("slug")
+    }
+
+    if request.method == "POST":
+        name = request.POST.get("name")
+
+        if name:
+            slug = name.lower().replace(" ", "_")
+            categories_col.update_one(
+                {"_id": ObjectId(category_id)},
+                {"$set": {"name": name, "slug": slug}}
+            )
+
+        return redirect("categorias_list")
+
+    return render(
+        request,
+        "categorias/form.html",
+        {"categoria": categoria}
+    )
+
+# ==============================
+#     BORRAR CATEGORÍAS
+# ==============================
+
+#@user_passes_test(is_admin)
+def categoria_delete(request, category_id):
+    category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
+
+    if category_doc:
+        # borrar valores asociados
+        category_values_col.delete_many(
+            {"category_slug": category_doc.get("slug")}
+        )
+
+        # borrar categoría
+        categories_col.delete_one(
+            {"_id": ObjectId(category_id)}
+        )
+
+    return redirect("categorias_list")
+
+# ==============================
+#   CREAR VALORES CATEGORÍAS
+# ==============================
+#@user_passes_test(is_admin)
+def category_value_create(request, category_id):
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["dogs"]
+    categories_col = db["categories"]
+    values_col = db["category_values"]
+
+    category = categories_col.find_one({"_id": ObjectId(category_id)})
+
+    if request.method == "POST":
+        value = request.POST.get("value")
+        if value:
+            values_col.insert_one({
+                "category_slug": category["slug"],
+                "value": value
+            })
+        return redirect("category_values_list", category_id=category_id)
+
+    return render(
+        request,
+        "categorias/value_form.html",
+        {"category": category}
+    )
+
+# ==============================
+#   BORRAR VALORES CATEGORÍAS
+# ==============================
+#@user_passes_test(is_admin)
+def category_value_delete(request, value_id):
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["dogs"]
+    values_col = db["category_values"]
+
+    value = values_col.find_one({"_id": ObjectId(value_id)})
+    values_col.delete_one({"_id": ObjectId(value_id)})
+
+    category = categories_col.find_one(
+        {"slug": value["category_slug"]}
+    )
+
+    return redirect(
+        "category_values_list",
+        category_id=str(category["_id"])
+    )
+
+
+# ==============================
+#   EDITAR VALORES CATEGORÍAS
+# ==============================
+#@user_passes_test(is_admin)
+def category_value_update(request, value_id):
+    value_doc = category_values_col.find_one({"_id": ObjectId(value_id)})
+
+    if not value_doc:
+        return redirect("categorias_list")
+
+    if request.method == "POST":
+        new_value = request.POST.get("value")
+
+        if new_value:
+            category_values_col.update_one(
+                {"_id": ObjectId(value_id)},
+                {"$set": {"value": new_value}}
+            )
+
+        # volver a la lista de valores de su categoría
+        category = categories_col.find_one(
+            {"slug": value_doc["category_slug"]}
+        )
+
+        return redirect(
+            "category_values_list",
+            category_id=str(category["_id"])
+        )
+
+    return render(
+        request,
+        "categorias/value_form.html",
+        {
+            "value_obj": {
+                "id": str(value_doc["_id"]),
+                "value": value_doc["value"]
+            }
+        }
+    )
