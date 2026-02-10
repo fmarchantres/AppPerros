@@ -17,6 +17,8 @@ urlpatterns = [
     path("cargar-fichero/", views.cargar_fichero, name="cargar_fichero"),
     path("subir-fichero/", views.subir_fichero, name="subir_fichero"),
     path("perro/<int:code>/valorar/", views.rate_dog, name="rate_dog"),
+    path("perro/<int:dog_code>/valorar/", views.rate_dog, name="rate_dog"),
+
 
 
     # =========================

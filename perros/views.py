@@ -7,9 +7,12 @@ from django.contrib import messages
 from bson import ObjectId
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from pymongo import MongoClient
 import csv
 import json
+from django.views.decorators.http import require_POST
+
 
 from perros.forms import RegistroForm, LoginForm
 from perros.models import *
@@ -24,6 +27,8 @@ categories_col = db["categories"]
 values_col = db["category_values"]
 category_values_col = db["category_values"]
 ratings_col = db["ratings"]
+
+
 
 
 
@@ -107,12 +112,34 @@ def detalle_perro(request, code):
     if not perro:
         return render(request, "404.html", status=404)
 
+    # ==============================
+    # ESTADÍSTICAS DE VALORACIONES
+    # ==============================
+    pipeline = [
+        {"$match": {"dog_code": code}},
+        {
+            "$group": {
+                "_id": "$dog_code",
+                "avg_score": {"$avg": "$score"},
+                "total": {"$sum": 1}
+            }
+        }
+    ]
+
+    stats = list(ratings_col.aggregate(pipeline))
+
+    avg_rating = round(stats[0]["avg_score"], 1) if stats else None
+    total_ratings = stats[0]["total"] if stats else 0
+
     user_rating = get_user_rating(request.user, code)
 
     return render(request, "detalle_perro.html", {
         "perro": perro,
-        "user_rating": user_rating
+        "user_rating": user_rating,
+        "avg_rating": avg_rating,
+        "total_ratings": total_ratings,
     })
+
 
 
 # ==============================
@@ -463,3 +490,27 @@ def category_value_update(request, value_id):
             }
         }
     )
+
+
+@require_POST
+@login_required
+def rate_dog(request, code):
+    score = int(request.POST.get("score"))
+
+    if score < 1 or score > 5:
+        return redirect("detalle_perro", code=code)
+
+    ratings_col.update_one(
+        {
+            "user_id": request.user.id,
+            "dog_code": code
+        },
+        {
+            "$set": {
+                "score": score
+            }
+        },
+        upsert=True
+    )
+
+    return redirect("detalle_perro", code=code)
