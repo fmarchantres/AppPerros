@@ -69,6 +69,46 @@
                         {% endif %}
                     </p>
 
+                    <!-- ===================== -->
+                    <!-- VALORACIÓN USUARIO -->
+                    <!-- ===================== -->
+                    {% if user.is_authenticated %}
+                        <hr>
+
+                        <h5>Tu valoración</h5>
+
+                        <form method="post" action="{% url 'rate_dog' perro.code %}">
+                            {% csrf_token %}
+
+                            <div class="mb-2">
+                                {% for i in "12345" %}
+                                    <label style="margin-right:8px;">
+                                        <input type="radio"
+                                               name="score"
+                                               value="{{ forloop.counter }}"
+                                               {% if user_rating and user_rating.score == forloop.counter %}checked{% endif %}
+                                               required>
+                                        ⭐
+                                    </label>
+                                {% endfor %}
+
+
+                            </div>
+                            <div class="d-grid mt-2">
+                                <button class="btn btn-primary">
+                                    {% if user_rating %}Actualizar valoración{% else %}Valorar{% endif %}
+                                </button>
+                            </div>
+
+
+                        </form>
+                    {% else %}
+                        <hr>
+                        <p class="text-muted">
+                            Inicia sesión para valorar este perro.
+                        </p>
+                    {% endif %}
+
                 </div>
             </div>
 

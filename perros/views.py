@@ -5,7 +5,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
 from django.contrib import messages
 from bson import ObjectId
-
+from datetime import datetime
+from django.contrib.auth.decorators import login_required
 from pymongo import MongoClient
 import csv
 import json
@@ -22,6 +23,8 @@ dogs_col = db["dogs"]
 categories_col = db["categories"]
 values_col = db["category_values"]
 category_values_col = db["category_values"]
+ratings_col = db["ratings"]
+
 
 
 # ==============================
@@ -82,6 +85,18 @@ def inicio(request):
         "temperamentos": temperamentos,
     })
 
+# ==============================
+# VALORACIONES
+# ==============================
+def get_user_rating(user, dog_code):
+    if not user.is_authenticated:
+        return None
+
+    return ratings_col.find_one({
+        "user_id": user.id,
+        "dog_code": dog_code
+    })
+
 
 # ==============================
 # DETALLE (SOLO MONGO)
@@ -92,10 +107,52 @@ def detalle_perro(request, code):
     if not perro:
         return render(request, "404.html", status=404)
 
+    user_rating = get_user_rating(request.user, code)
+
     return render(request, "detalle_perro.html", {
-        "perro": perro
+        "perro": perro,
+        "user_rating": user_rating
     })
 
+
+# ==============================
+# VALORACION
+# ==============================
+#@login_required
+def rate_dog(request, code):
+    score = int(request.POST.get("score"))
+    comment = request.POST.get("comment", "").strip()
+
+    if score < 1 or score > 5:
+        return redirect("detalle_perro", code=code)
+
+    existing = ratings_col.find_one({
+        "user_id": request.user.id,
+        "dog_code": code
+    })
+
+    now = datetime.utcnow()
+
+    if existing:
+        ratings_col.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {
+                "score": score,
+                "comment": comment,
+                "updated_at": now
+            }}
+        )
+    else:
+        ratings_col.insert_one({
+            "user_id": request.user.id,
+            "dog_code": code,
+            "score": score,
+            "comment": comment,
+            "created_at": now,
+            "updated_at": now
+        })
+
+    return redirect("detalle_perro", code=code)
 
 
 # ==============================
