@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2>Crear Ranking</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Nombre del ranking</label>
+            <input type="text"
+                   name="name"
+                   class="form-control"
+                   required>
+        </div>
+
+        <button class="btn btn-success">
+            Crear
+        </button>
+
+        <a href="{% url 'my_rankings' %}" class="btn btn-secondary">
+            Cancelar
+        </a>
+    </form>
+
+</div>
+{% endblock %}

@@ -16,10 +16,21 @@
     <div class="collapse navbar-collapse">
         <ul class="navbar-nav me-auto">
 
+            <!-- INICIO -->
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'inicio' %}">Inicio</a>
             </li>
 
+            <!-- RANKINGS (usuarios logueados) -->
+            {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'my_rankings' %}">
+                        Rankings
+                    </a>
+                </li>
+            {% endif %}
+
+            <!-- ADMIN -->
             {% if user.is_authenticated and user.role == 'admin' %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'cargar_fichero' %}">
@@ -36,6 +47,7 @@
 
         </ul>
 
+        <!-- BOTÓN LOGOUT -->
         {% if user.is_authenticated %}
             <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">
                 Cerrar sesión

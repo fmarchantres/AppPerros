@@ -12,6 +12,10 @@ from pymongo import MongoClient
 import csv
 import json
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required
+from bson import ObjectId
+
 
 
 from perros.forms import RegistroForm, LoginForm
@@ -27,6 +31,8 @@ categories_col = db["categories"]
 values_col = db["category_values"]
 category_values_col = db["category_values"]
 ratings_col = db["ratings"]
+rankings_col = db["rankings"]
+
 
 
 
@@ -133,12 +139,26 @@ def detalle_perro(request, code):
 
     user_rating = get_user_rating(request.user, code)
 
+    # ==============================
+    # RANKINGS DEL USUARIO
+    # ==============================
+    user_rankings = []
+
+    if request.user.is_authenticated:
+        for r in rankings_col.find({"user_id": request.user.id}):
+            user_rankings.append({
+                "id": str(r["_id"]),
+                "name": r["name"]
+            })
+
     return render(request, "detalle_perro.html", {
         "perro": perro,
         "user_rating": user_rating,
         "avg_rating": avg_rating,
         "total_ratings": total_ratings,
+        "user_rankings": user_rankings,
     })
+
 
 
 
@@ -514,3 +534,114 @@ def rate_dog(request, code):
     )
 
     return redirect("detalle_perro", code=code)
+
+
+# ==============================
+# CREAR RANKING
+# ==============================
+@login_required
+def create_ranking(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+
+        if name:
+            rankings_col.insert_one({
+                "user_id": request.user.id,
+                "name": name,
+                "dogs": []
+            })
+
+        return redirect("my_rankings")
+
+    return render(request, "rankings/create.html")
+
+# ==============================
+# LISTAR MIS RANKINGS
+# ==============================
+@login_required
+def my_rankings(request):
+    rankings = []
+
+    for r in rankings_col.find({"user_id": request.user.id}):
+        rankings.append({
+            "id": str(r["_id"]),
+            "name": r["name"],
+            "total_dogs": len(r.get("dogs", []))
+        })
+
+    return render(request, "rankings/list.html", {
+        "rankings": rankings
+    })
+
+# ==============================
+# AÑADIR PERRO A RANKING
+# ==============================
+@login_required
+def add_to_ranking(request, code):
+    if request.method == "POST":
+        ranking_id = request.POST.get("ranking_id")
+
+        ranking = rankings_col.find_one({"_id": ObjectId(ranking_id)})
+
+        if ranking and ranking["user_id"] == request.user.id:
+
+            # Evitar duplicados
+            already_exists = any(
+                dog["dog_code"] == code
+                for dog in ranking.get("dogs", [])
+            )
+
+            if not already_exists:
+                position = len(ranking.get("dogs", [])) + 1
+
+                rankings_col.update_one(
+                    {"_id": ObjectId(ranking_id)},
+                    {
+                        "$push": {
+                            "dogs": {
+                                "dog_code": code,
+                                "position": position
+                            }
+                        }
+                    }
+                )
+
+    return redirect("detalle_perro", code=code)
+
+
+
+#@login_required
+def ranking_detail(request, ranking_id):
+
+    ranking = rankings_col.find_one({
+        "_id": ObjectId(ranking_id),
+        "user_id": request.user.id
+    })
+
+    if not ranking:
+        return redirect("my_rankings")
+
+    dogs = []
+
+    # Ordenar por posición
+    sorted_dogs = sorted(
+        ranking.get("dogs", []),
+        key=lambda x: x.get("position", 0)
+    )
+
+    for item in sorted_dogs:
+        dog = dogs_col.find_one(
+            {"code": item["dog_code"]},
+            {"_id": 0}
+        )
+        if dog:
+            dogs.append(dog)
+
+    return render(
+        request,
+        "rankings/detail.html",
+        {
+            "ranking": ranking,
+            "dogs": dogs
+        }
+    )

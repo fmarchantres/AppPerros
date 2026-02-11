@@ -18,8 +18,10 @@ urlpatterns = [
     path("subir-fichero/", views.subir_fichero, name="subir_fichero"),
     path("perro/<int:code>/valorar/", views.rate_dog, name="rate_dog"),
     path("perro/<int:dog_code>/valorar/", views.rate_dog, name="rate_dog"),
-
-
+    path("rankings/", views.my_rankings, name="my_rankings"),
+    path("rankings/crear/", views.create_ranking, name="create_ranking"),
+    path("perro/<int:code>/add-to-ranking/", views.add_to_ranking, name="add_to_ranking"),
+    path("rankings/<str:ranking_id>/", views.ranking_detail, name="ranking_detail"),
 
     # =========================
     # CATEGORÍAS
