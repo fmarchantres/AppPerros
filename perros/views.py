@@ -645,3 +645,112 @@ def ranking_detail(request, ranking_id):
             "dogs": dogs
         }
     )
+
+# ==============================
+# ESTADISTICAS GLOBALES
+# ==============================
+def estadisticas_globales(request):
+    db = dogs_col.database
+    ratings_col = db.ratings
+    dogs_collection = db.dogs
+
+    # ==============================
+    # TOTALES
+    # ==============================
+    total_perros = dogs_collection.count_documents({})
+    total_valoraciones = ratings_col.count_documents({})
+
+    # ==============================
+    # MEDIA GLOBAL
+    # ==============================
+    media_global_data = list(ratings_col.aggregate([
+        {"$group": {"_id": None, "media": {"$avg": "$score"}}}
+    ]))
+    media_global = round(media_global_data[0]["media"], 2) if media_global_data else 0
+
+    # ==============================
+    # TOP MEJOR VALORADOS
+    # ==============================
+    top_mejor_valorados = list(ratings_col.aggregate([
+        {
+            "$group": {
+                "_id": "$dog_code",
+                "avg_score": {"$avg": "$score"},
+                "total": {"$sum": 1}
+            }
+        },
+        {"$sort": {"avg_score": -1}},
+        {"$limit": 5}
+    ]))
+
+    for dog in top_mejor_valorados:
+        dog["dog_code"] = dog["_id"]
+
+    # Obtener nombres de los perros del Top
+    codigos = [dog["dog_code"] for dog in top_mejor_valorados]
+
+    perros_top = list(dogs_collection.find(
+        {"code": {"$in": codigos}},
+        {"_id": 0, "code": 1, "name": 1}
+    ))
+
+    # Crear diccionario code -> name
+    mapa_nombres = {perro["code"]: perro["name"] for perro in perros_top}
+
+    # Añadir nombre a cada elemento del top
+    for dog in top_mejor_valorados:
+        dog["name"] = mapa_nombres.get(dog["dog_code"], "Sin nombre")
+
+    # ==============================
+    # MEDIA POR GRUPO
+    # ==============================
+    media_por_grupo = list(ratings_col.aggregate([
+        {
+            "$lookup": {
+                "from": "dogs",
+                "localField": "dog_code",
+                "foreignField": "code",
+                "as": "dog"
+            }
+        },
+        {"$unwind": "$dog"},
+        {
+            "$group": {
+                "_id": "$dog.group_id",
+                "media": {"$avg": "$score"},
+                "total": {"$sum": 1}
+            }
+        },
+        {"$sort": {"media": -1}}
+    ]))
+
+    context = {
+        "total_perros": total_perros,
+        "total_valoraciones": total_valoraciones,
+        "media_global": media_global,
+        "top_mejor_valorados": top_mejor_valorados,
+        "media_por_grupo": media_por_grupo
+    }
+
+    # Obtener IDs de grupos
+    group_ids = [grupo["_id"] for grupo in media_por_grupo]
+
+    # Buscar nombres en category_values
+    category_values_col = db.category_values
+
+    grupos = list(category_values_col.find(
+        {"id": {"$in": group_ids}},
+        {"_id": 0, "id": 1, "value": 1}
+    ))
+
+    # Crear mapa id -> nombre
+    mapa_grupos = {grupo["id"]: grupo["value"] for grupo in grupos}
+
+    # Añadir nombre a cada grupo
+    for grupo in media_por_grupo:
+        grupo["group_id"] = grupo["_id"]
+        grupo["group_name"] = mapa_grupos.get(grupo["_id"], "Sin grupo")
+
+    return render(request, "estadisticas.html", context)
+
+

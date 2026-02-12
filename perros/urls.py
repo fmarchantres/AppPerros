@@ -5,8 +5,8 @@ from . import views
 urlpatterns = [
     path('perros/', listar_perros),
 
-    path('login/', login_usuario),
-    path('registro/', registrar_usuario),
+    path('login/', login_usuario, name="login"),
+    path('registro/', registrar_usuario, name="registro"),
 
     path('', inicio, name="inicio"),
 
@@ -22,6 +22,7 @@ urlpatterns = [
     path("rankings/crear/", views.create_ranking, name="create_ranking"),
     path("perro/<int:code>/add-to-ranking/", views.add_to_ranking, name="add_to_ranking"),
     path("rankings/<str:ranking_id>/", views.ranking_detail, name="ranking_detail"),
+    path("estadisticas/", views.estadisticas_globales, name="estadisticas"),
 
     # =========================
     # CATEGORÍAS

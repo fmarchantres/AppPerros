@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Estadísticas{% endblock %}
+
+{% block content %}
+
+    <h2 class="mb-4">Estadísticas Globales</h2>
+
+    <!-- RESUMEN GENERAL -->
+    <div class="card p-4 shadow-sm">
+        <p><strong>Total de perros:</strong> {{ total_perros }}</p>
+        <p><strong>Total de valoraciones:</strong> {{ total_valoraciones }}</p>
+        <p><strong>Media global:</strong> {{ media_global }}</p>
+    </div>
+
+    <!-- TOP MEJOR VALORADOS -->
+    <h3 class="mt-5">Elementos más valorados</h3>
+
+    <div class="card shadow-sm p-3">
+        <ul class="list-group list-group-flush">
+            {% for dog in top_mejor_valorados %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>{{ dog.dog_code }} - {{ dog.name }}</strong>
+                    </span>
+                    <span>
+                        ⭐ {{ dog.avg_score|floatformat:1 }}
+                        ({{ dog.total }} votos)
+                    </span>
+                </li>
+            {% empty %}
+                <li class="list-group-item">No hay valoraciones aún.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- PROMEDIO POR CATEGORÍA -->
+    <h3 class="mt-5">Promedio por categoría</h3>
+
+    <div class="card shadow-sm p-3">
+        <ul class="list-group list-group-flush">
+            {% for grupo in media_por_grupo %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>{{ grupo.group_name }}</strong>
+                    </span>
+                    <span>
+                        ⭐ {{ grupo.media|floatformat:1 }}
+                        ({{ grupo.total }} votos)
+                    </span>
+                </li>
+            {% empty %}
+                <li class="list-group-item">No hay valoraciones por categoría aún.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+{% endblock %}
