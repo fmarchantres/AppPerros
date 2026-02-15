@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Administración{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">Panel de Administración</h2>
+
+<!-- RESUMEN GENERAL -->
+<div class="card p-4 shadow-sm">
+    <p><strong>Total de perros:</strong> {{ total_perros }}</p>
+    <p><strong>Total de valoraciones:</strong> {{ total_valoraciones }}</p>
+    <p><strong>Total de categorías:</strong> {{ total_categorias }}</p>
+    <p><strong>Total de usuarios:</strong> {{ total_usuarios }}</p>
+</div>
+
+<!-- ÚLTIMOS USUARIOS -->
+<h3 class="mt-5">Últimos usuarios registrados</h3>
+
+<div class="card shadow-sm p-3">
+    <ul class="list-group list-group-flush">
+        {% for user in ultimos_usuarios %}
+            <li class="list-group-item">
+                <strong>{{ user.username }}</strong>
+            </li>
+        {% empty %}
+            <li class="list-group-item">No hay usuarios registrados.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<!-- ÚLTIMAS VALORACIONES -->
+<h3 class="mt-5">Últimas valoraciones</h3>
+
+<div class="card shadow-sm p-3">
+    <ul class="list-group list-group-flush">
+        {% for r in ultimas_valoraciones %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>
+                    <strong>{{ r.username }}</strong> → {{ r.dog_name }}
+                </span>
+                <span>
+                    ⭐ {{ r.score }}
+                </span>
+            </li>
+        {% empty %}
+            <li class="list-group-item">No hay valoraciones registradas.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% endblock %}

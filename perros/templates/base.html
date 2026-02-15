@@ -21,13 +21,12 @@
                 <a class="nav-link" href="{% url 'inicio' %}">Inicio</a>
             </li>
 
-            <!-- ESTADISTICAS -->
+            <!-- ESTADÍSTICAS -->
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'estadisticas' %}">
                     Estadísticas
                 </a>
             </li>
-
 
             <!-- RANKINGS (usuarios logueados) -->
             {% if user.is_authenticated %}
@@ -49,6 +48,12 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'categorias_list' %}">
                         Categorías
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'panel_admin' %}">
+                        Panel Admin
                     </a>
                 </li>
             {% endif %}

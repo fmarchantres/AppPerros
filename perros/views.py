@@ -3,19 +3,18 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.core.paginator import Paginator
-from django.contrib import messages
-from bson import ObjectId
 from datetime import datetime
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 from pymongo import MongoClient
 import csv
 import json
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.decorators import login_required
 from bson import ObjectId
-
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.models import User
 
 
 from perros.forms import RegistroForm, LoginForm
@@ -754,3 +753,67 @@ def estadisticas_globales(request):
     return render(request, "estadisticas.html", context)
 
 
+#PANEL ADMIN
+def panel_admin(request):
+
+    # Verificar acceso solo admin
+    if not request.user.is_authenticated or request.user.role != "admin":
+        messages.error(request, "Acceso no autorizado.")
+        return redirect("inicio")
+
+    db = dogs_col.database
+    ratings_col = db.ratings
+    dogs_collection = db.dogs
+    category_values_col = db.category_values
+
+    # ==============================
+    # ESTADÍSTICAS GENERALES
+    # ==============================
+    total_perros = dogs_collection.count_documents({})
+    total_valoraciones = ratings_col.count_documents({})
+    total_categorias = category_values_col.count_documents({})
+    total_usuarios = User.objects.count()
+
+    # ==============================
+    # ÚLTIMOS USUARIOS REGISTRADOS
+    # ==============================
+    ultimos_usuarios = User.objects.order_by("-id")[:5]
+
+    # ==============================
+    # ÚLTIMAS VALORACIONES
+    # ==============================
+    ultimas_valoraciones = list(
+        ratings_col.find().sort("_id", -1).limit(5)
+    )
+
+    # Obtener IDs únicos
+    dog_codes = list({r["dog_code"] for r in ultimas_valoraciones})
+    user_ids = list({r["user_id"] for r in ultimas_valoraciones})
+
+    # Buscar perros
+    perros = list(dogs_collection.find(
+        {"code": {"$in": dog_codes}},
+        {"_id": 0, "code": 1, "name": 1}
+    ))
+    mapa_perros = {p["code"]: p["name"] for p in perros}
+
+    # Buscar usuarios
+    usuarios = User.objects.filter(id__in=user_ids)
+    mapa_usuarios = {u.id: u.username for u in usuarios}
+
+    # Añadir nombres a cada valoración
+    for r in ultimas_valoraciones:
+        r["dog_name"] = mapa_perros.get(r["dog_code"], "Desconocido")
+        r["username"] = mapa_usuarios.get(r["user_id"], "Desconocido")
+
+    # Contexto final
+    context = {
+        "total_perros": total_perros,
+        "total_valoraciones": total_valoraciones,
+        "total_categorias": total_categorias,
+        "total_usuarios": total_usuarios,
+        "ultimos_usuarios": ultimos_usuarios,
+        "ultimas_valoraciones": ultimas_valoraciones,
+    }
+
+    return render(request, "panel_admin.html", context)

@@ -23,6 +23,7 @@ urlpatterns = [
     path("perro/<int:code>/add-to-ranking/", views.add_to_ranking, name="add_to_ranking"),
     path("rankings/<str:ranking_id>/", views.ranking_detail, name="ranking_detail"),
     path("estadisticas/", views.estadisticas_globales, name="estadisticas"),
+    path("panel-admin/", views.panel_admin, name="panel_admin"),
 
     # =========================
     # CATEGORÍAS
