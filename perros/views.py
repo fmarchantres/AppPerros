@@ -56,13 +56,27 @@ def listar_perros(request):
 # HOME + FILTROS (SOLO MONGO)
 # ==============================
 def inicio(request):
+
     query = {}
 
+    search = request.GET.get("search")
     origin = request.GET.get("origin")
     group = request.GET.get("group")
     life_span = request.GET.get("life")
     temperament = request.GET.get("temperament")
 
+    # ==============================
+    # BUSCADOR POR NOMBRE
+    # ==============================
+    if search:
+        query["name"] = {
+            "$regex": search,
+            "$options": "i"   # Insensible a mayúsculas
+        }
+
+    # ==============================
+    # FILTROS
+    # ==============================
     if origin:
         query["origin"] = origin
 
@@ -73,7 +87,7 @@ def inicio(request):
         query["life_span_category"] = life_span
 
     if temperament:
-        query["temperaments"] = temperament  # array → match directo
+        query["temperaments"] = temperament
 
     perros = list(dogs_col.find(query, {"_id": 0}))
 
@@ -81,7 +95,7 @@ def inicio(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # Valores únicos para filtros (desde Mongo)
+    # Valores únicos para filtros
     origenes = sorted(dogs_col.distinct("origin"))
     grupos = sorted(dogs_col.distinct("breed_group"))
     vidas = sorted(dogs_col.distinct("life_span_category"))
@@ -94,6 +108,8 @@ def inicio(request):
         "vidas": vidas,
         "temperamentos": temperamentos,
     })
+
+
 
 # ==============================
 # VALORACIONES
@@ -111,7 +127,9 @@ def get_user_rating(user, dog_code):
 # ==============================
 # DETALLE (SOLO MONGO)
 # ==============================
+
 def detalle_perro(request, code):
+
     perro = dogs_col.find_one({"code": code}, {"_id": 0})
 
     if not perro:
@@ -136,7 +154,33 @@ def detalle_perro(request, code):
     avg_rating = round(stats[0]["avg_score"], 1) if stats else None
     total_ratings = stats[0]["total"] if stats else 0
 
-    user_rating = get_user_rating(request.user, code)
+    # ==============================
+    # VALORACIÓN DEL USUARIO ACTUAL
+    # ==============================
+    user_rating = None
+    if request.user.is_authenticated:
+        user_rating = ratings_col.find_one({
+            "user_id": request.user.id,
+            "dog_code": code
+        })
+
+    # ==============================
+    # LISTADO DE COMENTARIOS
+    # ==============================
+    ratings = list(
+        ratings_col.find(
+            {"dog_code": code},
+            {"_id": 0}
+        ).sort("created_at", -1)
+    )
+
+    # Obtener nombres de usuarios
+    user_ids = [r["user_id"] for r in ratings]
+    users = User.objects.filter(id__in=user_ids)
+    user_map = {u.id: u.username for u in users}
+
+    for r in ratings:
+        r["username"] = user_map.get(r["user_id"], "Usuario")
 
     # ==============================
     # RANKINGS DEL USUARIO
@@ -155,8 +199,10 @@ def detalle_perro(request, code):
         "user_rating": user_rating,
         "avg_rating": avg_rating,
         "total_ratings": total_ratings,
+        "ratings": ratings,
         "user_rankings": user_rankings,
     })
+
 
 
 
@@ -166,7 +212,15 @@ def detalle_perro(request, code):
 # ==============================
 #@login_required
 def rate_dog(request, code):
-    score = int(request.POST.get("score"))
+
+    if request.method != "POST":
+        return redirect("detalle_perro", code=code)
+
+    try:
+        score = int(request.POST.get("score"))
+    except (TypeError, ValueError):
+        return redirect("detalle_perro", code=code)
+
     comment = request.POST.get("comment", "").strip()
 
     if score < 1 or score > 5:
@@ -182,11 +236,13 @@ def rate_dog(request, code):
     if existing:
         ratings_col.update_one(
             {"_id": existing["_id"]},
-            {"$set": {
-                "score": score,
-                "comment": comment,
-                "updated_at": now
-            }}
+            {
+                "$set": {
+                    "score": score,
+                    "comment": comment,
+                    "updated_at": now
+                }
+            }
         )
     else:
         ratings_col.insert_one({
@@ -290,7 +346,7 @@ def subir_fichero(request):
 # ==============================
 # CATEGORÍAS (ADMIN - MONGO)
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def categorias_list(request):
     categorias = []
 
@@ -313,7 +369,7 @@ def categorias_list(request):
 # ==============================
 #        CREAR CATEGORÍAS
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def categoria_create(request):
     if request.method == "POST":
         name = request.POST.get("name")
@@ -335,7 +391,7 @@ def categoria_create(request):
 # ==============================
 # CATEGORÍAS MOSTRAR VALORES
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def category_values_list(request, category_id):
     # Buscar categoría
     category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
@@ -369,7 +425,7 @@ def category_values_list(request, category_id):
 # ==============================
 #    ACTUALIZAR CATEGORÍAS
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def categoria_update(request, category_id):
     category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
 
@@ -404,7 +460,7 @@ def categoria_update(request, category_id):
 #     BORRAR CATEGORÍAS
 # ==============================
 
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def categoria_delete(request, category_id):
     category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
 
@@ -424,34 +480,44 @@ def categoria_delete(request, category_id):
 # ==============================
 #   CREAR VALORES CATEGORÍAS
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def category_value_create(request, category_id):
-    client = MongoClient("mongodb://localhost:27017/")
-    db = client["dogs"]
-    categories_col = db["categories"]
-    values_col = db["category_values"]
 
-    category = categories_col.find_one({"_id": ObjectId(category_id)})
+    category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
+
+    if not category_doc:
+        return redirect("categorias_list")
+
+    category = {
+        "id": str(category_doc["_id"]),
+        "name": category_doc["name"],
+        "slug": category_doc.get("slug")
+    }
 
     if request.method == "POST":
         value = request.POST.get("value")
+
         if value:
-            values_col.insert_one({
+            category_values_col.insert_one({
                 "category_slug": category["slug"],
                 "value": value
             })
-        return redirect("category_values_list", category_id=category_id)
+
+        return redirect("category_values_list", category_id=category["id"])
 
     return render(
         request,
         "categorias/value_form.html",
-        {"category": category}
+        {
+            "category": category
+        }
     )
+
 
 # ==============================
 #   BORRAR VALORES CATEGORÍAS
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def category_value_delete(request, value_id):
     client = MongoClient("mongodb://localhost:27017/")
     db = client["dogs"]
@@ -473,7 +539,7 @@ def category_value_delete(request, value_id):
 # ==============================
 #   EDITAR VALORES CATEGORÍAS
 # ==============================
-#@user_passes_test(is_admin)
+@user_passes_test(is_admin)
 def category_value_update(request, value_id):
     value_doc = category_values_col.find_one({"_id": ObjectId(value_id)})
 
@@ -511,28 +577,103 @@ def category_value_update(request, value_id):
     )
 
 
-@require_POST
-@login_required
-def rate_dog(request, code):
-    score = int(request.POST.get("score"))
 
-    if score < 1 or score > 5:
-        return redirect("detalle_perro", code=code)
+@user_passes_test(is_admin)
+def admin_elementos_list(request):
 
-    ratings_col.update_one(
-        {
-            "user_id": request.user.id,
-            "dog_code": code
-        },
-        {
-            "$set": {
-                "score": score
-            }
-        },
-        upsert=True
+    perros = list(dogs_col.find({}, {"_id": 0}).sort("code", 1))
+
+    return render(
+        request,
+        "admin/elementos_list.html",
+        {"perros": perros}
     )
 
-    return redirect("detalle_perro", code=code)
+
+# ==============================
+# ADMIN - CREAR ELEMENTO
+# ==============================
+@user_passes_test(is_admin)
+def admin_elemento_create(request):
+
+    if request.method == "POST":
+        name = request.POST.get("name")
+        image_url = request.POST.get("image_url")
+        origin = request.POST.get("origin")
+        breed_group = request.POST.get("breed_group")
+        life_span_category = request.POST.get("life_span_category")
+
+        # Generar nuevo código automático
+        last_dog = dogs_col.find_one(sort=[("code", -1)])
+        new_code = last_dog["code"] + 1 if last_dog else 1
+
+        dogs_col.insert_one({
+            "code": new_code,
+            "name": name,
+            "image_url": image_url,
+            "origin": origin,
+            "breed_group": breed_group,
+            "life_span_category": life_span_category,
+            "temperaments": []
+        })
+
+        messages.success(request, "Elemento creado correctamente.")
+        return redirect("admin_elementos_list")
+
+    return render(request, "admin/elemento_form.html")
+
+
+# ==============================
+# ADMIN - EDITAR ELEMENTO
+# ==============================
+@user_passes_test(is_admin)
+def admin_elemento_update(request, code):
+
+    perro = dogs_col.find_one({"code": int(code)})
+
+    if not perro:
+        messages.error(request, "Elemento no encontrado.")
+        return redirect("admin_elementos_list")
+
+    if request.method == "POST":
+        name = request.POST.get("name")
+        image_url = request.POST.get("image_url")
+        origin = request.POST.get("origin")
+        breed_group = request.POST.get("breed_group")
+        life_span_category = request.POST.get("life_span_category")
+
+        dogs_col.update_one(
+            {"code": int(code)},
+            {
+                "$set": {
+                    "name": name,
+                    "image_url": image_url,
+                    "origin": origin,
+                    "breed_group": breed_group,
+                    "life_span_category": life_span_category
+                }
+            }
+        )
+
+        messages.success(request, "Elemento actualizado correctamente.")
+        return redirect("admin_elementos_list")
+
+    return render(request, "admin/elemento_form.html", {
+        "perro": perro
+    })
+
+
+
+# ==============================
+# ADMIN - ELIMINAR ELEMENTO
+# ==============================
+@user_passes_test(is_admin)
+def admin_elemento_delete(request, code):
+
+    dogs_col.delete_one({"code": int(code)})
+
+    messages.success(request, "Elemento eliminado correctamente.")
+    return redirect("admin_elementos_list")
 
 
 # ==============================

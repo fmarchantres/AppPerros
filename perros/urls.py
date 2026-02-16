@@ -31,6 +31,11 @@ urlpatterns = [
          views.update_ranking_order,
          name="update_ranking_order"),
 
+    path("admin/elementos/", views.admin_elementos_list, name="admin_elementos_list"),
+    path("admin/elementos/crear/", views.admin_elemento_create, name="admin_elemento_create"),
+    path("admin/elementos/<int:code>/editar/", views.admin_elemento_update, name="admin_elemento_update"),
+    path("admin/elementos/<int:code>/eliminar/", views.admin_elemento_delete, name="admin_elemento_delete"),
+
     # =========================
     # CATEGORÍAS
     # =========================

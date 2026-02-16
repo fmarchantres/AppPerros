@@ -18,7 +18,7 @@
     <button type="submit" class="btn btn-success">Guardar</button>
 
     <a href="{% if category %}
-                {% url 'category_values_list' category._id|stringformat:"s" %}
+                {% url 'category_values_list' category.id %}
              {% else %}
                 {% url 'categorias_list' %}
              {% endif %}"
