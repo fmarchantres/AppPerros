@@ -101,11 +101,20 @@
                     {% endfor %}
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100 mb-3">
                     Aplicar filtros
                 </button>
 
             </form>
+
+            <!-- ===================== -->
+            <!-- BOTÓN RANKING GLOBAL -->
+            <!-- ===================== -->
+
+            <a href="{% url 'ranking_global' %}?group={{ request.GET.group }}&origin={{ request.GET.origin }}&life={{ request.GET.life }}"
+               class="btn btn-outline-dark w-100">
+                Ver Ranking Global
+            </a>
 
         </div>
 

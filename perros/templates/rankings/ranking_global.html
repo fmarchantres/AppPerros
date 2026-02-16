@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Ranking Global{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">{{ titulo }}</h2>
+
+    {% if ranking %}
+        <div class="card shadow-sm p-4">
+
+            <ul class="list-group list-group-flush">
+
+                {% for r in ranking %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                        <div>
+                            <strong>#{{ r.position }}</strong>
+                            {{ r.name }}
+                        </div>
+
+                        <div>
+                            ⭐ {{ r.avg_score }} / 5
+                            <br>
+                            <small class="text-muted">
+                                {{ r.total }} valoraciones
+                            </small>
+                        </div>
+
+                    </li>
+                {% endfor %}
+
+            </ul>
+
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            No hay valoraciones para esta categoría.
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

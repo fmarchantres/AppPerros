@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Ranking {{ grupo }}{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">
+        Ranking Global - Grupo {{ grupo }}
+    </h2>
+
+    {% if ranking %}
+
+        {% for dog in ranking %}
+            <div class="card mb-3 shadow-sm">
+                <div class="row g-0 align-items-center">
+
+                    <div class="col-md-2">
+                        <img src="{{ dog.image_url }}"
+                             class="img-fluid rounded-start"
+                             alt="{{ dog.name }}">
+                    </div>
+
+                    <div class="col-md-8">
+                        <div class="card-body">
+                            <h5>{{ forloop.counter }}. {{ dog.name }}</h5>
+                            <p class="mb-1">
+                                ⭐ {{ dog.avg_score }} / 5
+                            </p>
+                            <small class="text-muted">
+                                {{ dog.total }} valoraciones
+                            </small>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        {% endfor %}
+
+    {% else %}
+        <p class="text-muted">
+            No hay valoraciones para este grupo.
+        </p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

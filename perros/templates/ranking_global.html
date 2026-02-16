@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Ranking {{ group_name }}{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">Ranking Global - {{ group_name }}</h2>
+
+<div class="card shadow-sm p-4">
+
+    {% if ranking %}
+        <ol class="list-group list-group-numbered">
+
+            {% for item in ranking %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>{{ item.name }}</strong>
+                    </span>
+
+                    <span>
+                        ⭐ {{ item.avg_score|floatformat:1 }}
+                        <small class="text-muted">
+                            ({{ item.total }} votos)
+                        </small>
+                    </span>
+                </li>
+            {% endfor %}
+
+        </ol>
+    {% else %}
+        <p class="text-muted">No hay valoraciones aún en esta categoría.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

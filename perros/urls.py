@@ -30,6 +30,21 @@ urlpatterns = [
     path("ranking/<str:ranking_id>/update-order/",
          views.update_ranking_order,
          name="update_ranking_order"),
+    path("perro/<int:code>/eliminar-valoracion/",
+         views.delete_rating,
+         name="delete_rating"),
+
+    path(
+        "ranking/grupo/<str:group_name>/",
+        views.ranking_por_grupo,
+        name="ranking_por_grupo"
+    ),
+
+    path("ranking/global/", views.ranking_global, name="ranking_global"),
+
+    path("ranking/grupo/<str:group_name>/",
+         views.ranking_categoria,
+         name="ranking_categoria"),
 
     path("admin/elementos/", views.admin_elementos_list, name="admin_elementos_list"),
     path("admin/elementos/crear/", views.admin_elemento_create, name="admin_elemento_create"),

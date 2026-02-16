@@ -183,6 +183,20 @@ def detalle_perro(request, code):
         r["username"] = user_map.get(r["user_id"], "Usuario")
 
     # ==============================
+    # ELIMINAR VALORACIÓN
+    # ==============================
+    @login_required
+    def delete_rating(request, code):
+
+        ratings_col.delete_one({
+            "user_id": request.user.id,
+            "dog_code": code
+        })
+
+        messages.success(request, "Valoración eliminada correctamente.")
+        return redirect("detalle_perro", code=code)
+
+    # ==============================
     # RANKINGS DEL USUARIO
     # ==============================
     user_rankings = []
@@ -253,6 +267,21 @@ def rate_dog(request, code):
             "created_at": now,
             "updated_at": now
         })
+
+    return redirect("detalle_perro", code=code)
+
+
+# ==============================
+# ELIMINAR VALORACIÓN
+# ==============================
+@login_required
+@require_POST
+def delete_rating(request, code):
+
+    ratings_col.delete_one({
+        "user_id": request.user.id,
+        "dog_code": code
+    })
 
     return redirect("detalle_perro", code=code)
 
@@ -804,6 +833,182 @@ def ranking_detail(request, ranking_id):
         }
     )
 
+
+def ranking_por_grupo(request, group_name):
+
+    #Obtener perros del grupo
+    dogs = list(dogs_col.find(
+        {"breed_group": group_name},
+        {"_id": 0}
+    ))
+
+    if not dogs:
+        return render(request, "ranking_global.html", {
+            "group_name": group_name,
+            "ranking": []
+        })
+
+    dog_codes = [dog["code"] for dog in dogs]
+
+    #Calcular medias
+    ranking = list(ratings_col.aggregate([
+        {
+            "$match": {
+                "dog_code": {"$in": dog_codes}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$dog_code",
+                "avg_score": {"$avg": "$score"},
+                "total": {"$sum": 1}
+            }
+        },
+        {"$sort": {"avg_score": -1}}
+    ]))
+
+    #Añadir nombre de perro
+    dog_map = {dog["code"]: dog["name"] for dog in dogs}
+
+    for item in ranking:
+        item["dog_code"] = item["_id"]
+        item["name"] = dog_map.get(item["_id"], "Desconocido")
+
+    return render(request, "ranking_global.html", {
+        "group_name": group_name,
+        "ranking": ranking
+    })
+
+
+from django.db.models import Q
+
+def ranking_global(request):
+
+    group = request.GET.get("group")
+    origin = request.GET.get("origin")
+    life = request.GET.get("life")
+
+    # ==============================
+    # FILTRO BASE PARA PERROS
+    # ==============================
+    dog_query = {}
+
+    if group:
+        dog_query["breed_group"] = group
+
+    if origin:
+        dog_query["origin"] = origin
+
+    if life:
+        dog_query["life_span_category"] = life
+
+    # Obtener perros filtrados
+    filtered_dogs = list(dogs_col.find(dog_query, {"_id": 0, "code": 1, "name": 1}))
+
+    if not filtered_dogs:
+        return render(request, "rankings/ranking_global.html", {
+            "ranking": [],
+            "titulo": "Ranking Global"
+        })
+
+    dog_codes = [dog["code"] for dog in filtered_dogs]
+
+    # ==============================
+    # AGREGACIÓN EN RATINGS
+    # ==============================
+    pipeline = [
+        {"$match": {"dog_code": {"$in": dog_codes}}},
+        {
+            "$group": {
+                "_id": "$dog_code",
+                "avg_score": {"$avg": "$score"},
+                "total": {"$sum": 1}
+            }
+        },
+        {"$sort": {"avg_score": -1}}
+    ]
+
+    stats = list(ratings_col.aggregate(pipeline))
+
+    # Mapa code → name
+    name_map = {dog["code"]: dog["name"] for dog in filtered_dogs}
+
+    ranking = []
+    position = 1
+
+    for stat in stats:
+        ranking.append({
+            "position": position,
+            "name": name_map.get(stat["_id"], "Desconocido"),
+            "avg_score": round(stat["avg_score"], 2),
+            "total": stat["total"]
+        })
+        position += 1
+
+    titulo = "Ranking Global"
+
+    if group:
+        titulo += f" - Grupo: {group}"
+    if origin:
+        titulo += f" - Origen: {origin}"
+    if life:
+        titulo += f" - Vida: {life}"
+
+    return render(request, "rankings/ranking_global.html", {
+        "ranking": ranking,
+        "titulo": titulo
+    })
+
+
+
+def ranking_categoria(request, group_name):
+
+    # Buscar perros de ese grupo
+    perros_grupo = list(dogs_col.find(
+        {"breed_group": group_name},
+        {"_id": 0, "code": 1, "name": 1, "image_url": 1}
+    ))
+
+    codigos = [p["code"] for p in perros_grupo]
+
+    # Calcular media solo de esos perros
+    ranking = list(ratings_col.aggregate([
+        {
+            "$match": {
+                "dog_code": {"$in": codigos}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$dog_code",
+                "avg_score": {"$avg": "$score"},
+                "total": {"$sum": 1}
+            }
+        },
+        {"$sort": {"avg_score": -1}}
+    ]))
+
+    # Añadir datos del perro
+    mapa_perros = {p["code"]: p for p in perros_grupo}
+
+    resultado = []
+    for r in ranking:
+        dog_data = mapa_perros.get(r["_id"])
+        if dog_data:
+            resultado.append({
+                "code": dog_data["code"],
+                "name": dog_data["name"],
+                "image_url": dog_data.get("image_url"),
+                "avg_score": round(r["avg_score"], 2),
+                "total": r["total"]
+            })
+
+    return render(request, "rankings/ranking_categoria.html", {
+        "grupo": group_name,
+        "ranking": resultado
+    })
+
+
 # ==============================
 # ESTADISTICAS GLOBALES
 # ==============================
@@ -992,8 +1197,22 @@ def editar_ranking(request, ranking_id):
         messages.error(request, "Ranking no encontrado o no autorizado.")
         return redirect("my_rankings")
 
-    # Obtener todos los perros
-    perros = list(dogs_col.find({}, {"_id": 0}))
+    # ==============================
+    # OBTENER PERROS VALORADOS POR EL USUARIO
+    # ==============================
+
+    user_ratings = list(ratings_col.find(
+        {"user_id": request.user.id},
+        {"dog_code": 1, "_id": 0}
+    ))
+
+    rated_dog_codes = [r["dog_code"] for r in user_ratings]
+
+    # Solo traer esos perros
+    perros = list(dogs_col.find(
+        {"code": {"$in": rated_dog_codes}},
+        {"_id": 0}
+    ))
 
     # Obtener códigos ya añadidos al ranking
     dog_codes_in_ranking = [
@@ -1001,7 +1220,6 @@ def editar_ranking(request, ranking_id):
         for item in ranking.get("dogs", [])
     ]
 
-    # Convertir _id a string para el template
     ranking_id_str = str(ranking["_id"])
 
     context = {
@@ -1012,6 +1230,7 @@ def editar_ranking(request, ranking_id):
     }
 
     return render(request, "rankings/editar_ranking.html", context)
+
 
 
 ##ELIMINAR DEL RANKING
