@@ -24,6 +24,12 @@ urlpatterns = [
     path("rankings/<str:ranking_id>/", views.ranking_detail, name="ranking_detail"),
     path("estadisticas/", views.estadisticas_globales, name="estadisticas"),
     path("panel-admin/", views.panel_admin, name="panel_admin"),
+    path("ranking/<str:ranking_id>/editar/", views.editar_ranking, name="editar_ranking"),
+    path("ranking/<int:code>/remove/", views.remove_from_ranking, name="remove_from_ranking"),
+    path("ranking/<str:ranking_id>/delete/", views.delete_ranking, name="delete_ranking"),
+    path("ranking/<str:ranking_id>/update-order/",
+         views.update_ranking_order,
+         name="update_ranking_order"),
 
     # =========================
     # CATEGORÍAS

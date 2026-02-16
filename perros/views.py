@@ -544,15 +544,19 @@ def create_ranking(request):
         name = request.POST.get("name")
 
         if name:
-            rankings_col.insert_one({
+            result = rankings_col.insert_one({
                 "user_id": request.user.id,
                 "name": name,
                 "dogs": []
             })
 
+            # Redirigir directamente a editar ranking
+            return redirect("editar_ranking", ranking_id=str(result.inserted_id))
+
         return redirect("my_rankings")
 
     return render(request, "rankings/create.html")
+
 
 # ==============================
 # LISTAR MIS RANKINGS
@@ -577,35 +581,49 @@ def my_rankings(request):
 # ==============================
 @login_required
 def add_to_ranking(request, code):
+
     if request.method == "POST":
         ranking_id = request.POST.get("ranking_id")
 
-        ranking = rankings_col.find_one({"_id": ObjectId(ranking_id)})
+        ranking = rankings_col.find_one({
+            "_id": ObjectId(ranking_id),
+            "user_id": request.user.id
+        })
 
-        if ranking and ranking["user_id"] == request.user.id:
+        if not ranking:
+            messages.error(request, "Ranking no encontrado o no autorizado.")
+            return redirect("my_rankings")
 
-            # Evitar duplicados
-            already_exists = any(
-                dog["dog_code"] == code
-                for dog in ranking.get("dogs", [])
-            )
+        # Limitar a máximo 10 perros
+        if len(ranking.get("dogs", [])) >= 10:
+            messages.warning(request, "Solo puedes tener máximo 10 perros en el ranking.")
+            return redirect(f"/ranking/{ranking_id}/editar/")
 
-            if not already_exists:
-                position = len(ranking.get("dogs", [])) + 1
+        # Evitar duplicados
+        already_exists = any(
+            dog["dog_code"] == code
+            for dog in ranking.get("dogs", [])
+        )
 
-                rankings_col.update_one(
-                    {"_id": ObjectId(ranking_id)},
-                    {
-                        "$push": {
-                            "dogs": {
-                                "dog_code": code,
-                                "position": position
-                            }
+        if not already_exists:
+            position = len(ranking.get("dogs", [])) + 1
+
+            rankings_col.update_one(
+                {"_id": ObjectId(ranking_id)},
+                {
+                    "$push": {
+                        "dogs": {
+                            "dog_code": code,
+                            "position": position
                         }
                     }
-                )
+                }
+            )
 
-    return redirect("detalle_perro", code=code)
+        return redirect(f"/ranking/{ranking_id}/editar/#dog-{code}")
+
+    return redirect("my_rankings")
+
 
 
 
@@ -817,3 +835,111 @@ def panel_admin(request):
     }
 
     return render(request, "panel_admin.html", context)
+
+
+#EDITAR RANKING
+@login_required
+def editar_ranking(request, ranking_id):
+
+    # Buscar ranking del usuario
+    ranking = rankings_col.find_one({
+        "_id": ObjectId(ranking_id),
+        "user_id": request.user.id
+    })
+
+    if not ranking:
+        messages.error(request, "Ranking no encontrado o no autorizado.")
+        return redirect("my_rankings")
+
+    # Obtener todos los perros
+    perros = list(dogs_col.find({}, {"_id": 0}))
+
+    # Obtener códigos ya añadidos al ranking
+    dog_codes_in_ranking = [
+        item["dog_code"]
+        for item in ranking.get("dogs", [])
+    ]
+
+    # Convertir _id a string para el template
+    ranking_id_str = str(ranking["_id"])
+
+    context = {
+        "ranking": ranking,
+        "ranking_id": ranking_id_str,
+        "perros": perros,
+        "dog_codes_in_ranking": dog_codes_in_ranking
+    }
+
+    return render(request, "rankings/editar_ranking.html", context)
+
+
+##ELIMINAR DEL RANKING
+@login_required
+def remove_from_ranking(request, code):
+
+    if request.method == "POST":
+        ranking_id = request.POST.get("ranking_id")
+
+        ranking = rankings_col.find_one({"_id": ObjectId(ranking_id)})
+
+        if ranking and ranking["user_id"] == request.user.id:
+
+            rankings_col.update_one(
+                {"_id": ObjectId(ranking_id)},
+                {
+                    "$pull": {
+                        "dogs": {"dog_code": code}
+                    }
+                }
+            )
+
+        return redirect(f"/ranking/{ranking_id}/editar/#dog-{code}")
+
+    return redirect("my_rankings")
+
+#ELIMINAR RANKING
+@login_required
+def delete_ranking(request, ranking_id):
+
+    ranking = rankings_col.find_one({
+        "_id": ObjectId(ranking_id),
+        "user_id": request.user.id
+    })
+
+    if ranking:
+        rankings_col.delete_one({"_id": ObjectId(ranking_id)})
+
+    return redirect("my_rankings")
+
+#ACTUALIZAR ORDEN RANKING
+@login_required
+def update_ranking_order(request, ranking_id):
+
+    if request.method == "POST":
+        ranking = rankings_col.find_one({
+            "_id": ObjectId(ranking_id),
+            "user_id": request.user.id
+        })
+
+        if not ranking:
+            return JsonResponse({"error": "No autorizado"}, status=403)
+
+        data = json.loads(request.body)
+        new_order = data.get("order", [])
+
+        updated_dogs = []
+
+        for index, dog_code in enumerate(new_order):
+            updated_dogs.append({
+                "dog_code": int(dog_code),
+                "position": index + 1
+            })
+
+        rankings_col.update_one(
+            {"_id": ObjectId(ranking_id)},
+            {"$set": {"dogs": updated_dogs}}
+        )
+
+        return JsonResponse({"status": "ok"})
+
+    return JsonResponse({"error": "Invalid request"}, status=400)

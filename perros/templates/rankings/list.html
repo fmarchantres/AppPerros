@@ -11,8 +11,7 @@
 
     <ul class="list-group">
         {% for r in rankings %}
-            <a href="{% url 'ranking_detail' r.id %}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
 
                 <div>
                     <strong>{{ r.name }}</strong><br>
@@ -21,11 +20,30 @@
                     </small>
                 </div>
 
-                <span class="badge bg-primary rounded-pill">
-                    Ver
-                </span>
+                <div class="d-flex gap-2">
 
-            </a>
+                    <a href="{% url 'ranking_detail' r.id %}"
+                       class="btn btn-sm btn-primary">
+                        Ver
+                    </a>
+
+                    <a href="{% url 'editar_ranking' r.id %}"
+                       class="btn btn-sm btn-outline-secondary">
+                        Editar
+                    </a>
+
+                    <form method="POST"
+                          action="{% url 'delete_ranking' r.id %}"
+                          style="display:inline;">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger">
+                            Eliminar
+                        </button>
+                    </form>
+
+                </div>
+
+            </li>
         {% empty %}
             <li class="list-group-item">
                 No tienes rankings todavía.

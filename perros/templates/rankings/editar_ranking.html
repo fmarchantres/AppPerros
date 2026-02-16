@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Ranking{% endblock %}
+
+{% block content %}
+
+    <div class="container mt-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Editar Ranking: {{ ranking.name }}</h2>
+
+            <a href="{% url 'my_rankings' %}" class="btn btn-outline-secondary btn-sm">
+                ← Volver
+            </a>
+        </div>
+
+        <div class="row">
+
+            <!-- COLUMNA IZQUIERDA: RANKING ACTUAL -->
+            <div class="col-md-5">
+                <h4 class="mb-3">Tu Ranking (arrastra para ordenar)</h4>
+
+                <ul id="ranking-list" class="list-group mb-4">
+                    {% for item in ranking.dogs|dictsort:"position" %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center"
+                            data-id="{{ item.dog_code }}">
+
+                        <span>
+                            <strong>#{{ item.position }}</strong>
+                            {% for dog in perros %}
+                                {% if dog.code == item.dog_code %}
+                                    {{ dog.name }}
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+
+                            <span class="text-muted">☰</span>
+
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">
+                            No hay perros añadidos aún.
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+
+            <!-- COLUMNA DERECHA: TODOS LOS PERROS -->
+            <div class="col-md-7">
+                <h4 class="mb-3">Perros disponibles</h4>
+
+                <div class="row">
+                    {% for dog in perros %}
+                        <div class="col-md-6 mb-4" id="dog-{{ dog.code }}">
+                            <div class="card shadow-sm h-100">
+
+                                <img src="{{ dog.image_url }}"
+                                     class="card-img-top"
+                                     style="height: 150px; object-fit: cover;"
+                                     alt="{{ dog.name }}">
+
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">{{ dog.name }}</h6>
+
+                                    {% if dog.code in dog_codes_in_ranking %}
+
+                                        <!-- BOTÓN QUITAR -->
+                                        <form method="POST"
+                                              action="{% url 'remove_from_ranking' dog.code %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="ranking_id" value="{{ ranking_id }}">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                Quitar
+                                            </button>
+                                        </form>
+
+                                    {% else %}
+
+                                        <!-- BOTÓN AÑADIR -->
+                                        <form method="POST"
+                                              action="{% url 'add_to_ranking' dog.code %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="ranking_id" value="{{ ranking_id }}">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                Añadir
+                                            </button>
+                                        </form>
+
+                                    {% endif %}
+
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+        <!-- SORTABLE JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script>
+        const el = document.getElementById('ranking-list');
+
+        function updateNumbers() {
+            document.querySelectorAll('#ranking-list li').forEach((item, index) => {
+                const strong = item.querySelector('strong');
+                if (strong) {
+                    strong.textContent = "#" + (index + 1);
+                }
+            });
+        }
+
+        new Sortable(el, {
+            animation: 150,
+            onEnd: function () {
+
+                updateNumbers();
+
+                let order = [];
+
+                document.querySelectorAll('#ranking-list li').forEach(item => {
+                    if (item.dataset.id) {
+                        order.push(item.dataset.id);
+                    }
+                });
+
+                fetch("{% url 'update_ranking_order' ranking_id %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": "{{ csrf_token }}"
+                    },
+                    body: JSON.stringify({order: order})
+                });
+            }
+        });
+    </script>
+
+
+{% endblock %}
