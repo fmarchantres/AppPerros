@@ -25,14 +25,9 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center"
                             data-id="{{ item.dog_code }}">
 
-                        <span>
-                            <strong>#{{ item.position }}</strong>
-                            {% for dog in perros %}
-                                {% if dog.code == item.dog_code %}
-                                    {{ dog.name }}
-                                {% endif %}
-                            {% endfor %}
-                        </span>
+                            <span>
+                                <strong>#{{ item.position }}</strong> {{ item.name }}
+                            </span>
 
                             <span class="text-muted">☰</span>
 
@@ -144,6 +139,5 @@
             }
         });
     </script>
-
 
 {% endblock %}

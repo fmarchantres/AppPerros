@@ -4,66 +4,118 @@
 
 {% block content %}
 
-<h2 class="mb-4">Panel de Administración</h2>
+<div class="container py-4">
 
-<!-- RESUMEN GENERAL -->
-<div class="card p-4 shadow-sm">
-    <p><strong>Total de perros:</strong> {{ total_perros }}</p>
-    <p><strong>Total de valoraciones:</strong> {{ total_valoraciones }}</p>
-    <p><strong>Total de categorías:</strong> {{ total_categorias }}</p>
-    <p><strong>Total de usuarios:</strong> {{ total_usuarios }}</p>
-</div>
+    <h2 class="fw-bold mb-4"> Panel de Administración</h2>
 
-<!-- SECCIÓN GESTIÓN -->
-<h3 class="mt-5">Gestión</h3>
+    <!-- ============================= -->
+    <!-- MÉTRICAS RESUMEN -->
+    <!-- ============================= -->
 
-<div class="card shadow-sm p-3">
-    <div class="d-flex gap-3 flex-wrap">
+    <div class="row g-4 mb-5">
 
-        <a href="{% url 'admin_elementos_list' %}" class="btn btn-outline-primary">
-            Gestionar Elementos
-        </a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <h6 class="text-muted">Total de perros</h6>
+                <h3 class="fw-bold">{{ total_perros }}</h3>
+            </div>
+        </div>
 
-        <a href="{% url 'categorias_list' %}" class="btn btn-outline-secondary">
-            Gestionar Categorías
-        </a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <h6 class="text-muted">Valoraciones</h6>
+                <h3 class="fw-bold">{{ total_valoraciones }}</h3>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <h6 class="text-muted">Categorías</h6>
+                <h3 class="fw-bold">{{ total_categorias }}</h3>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center p-4 h-100">
+                <h6 class="text-muted">Usuarios</h6>
+                <h3 class="fw-bold">{{ total_usuarios }}</h3>
+            </div>
+        </div>
 
     </div>
-</div>
 
-<!-- ÚLTIMOS USUARIOS -->
-<h3 class="mt-5">Últimos usuarios registrados</h3>
+    <!-- ============================= -->
+    <!-- GESTIÓN -->
+    <!-- ============================= -->
 
-<div class="card shadow-sm p-3">
-    <ul class="list-group list-group-flush">
-        {% for user in ultimos_usuarios %}
-            <li class="list-group-item">
-                <strong>{{ user.username }}</strong>
-            </li>
-        {% empty %}
-            <li class="list-group-item">No hay usuarios registrados.</li>
-        {% endfor %}
-    </ul>
-</div>
+    <h4 class="fw-bold mb-3"> Gestión</h4>
 
-<!-- ÚLTIMAS VALORACIONES -->
-<h3 class="mt-5">Últimas valoraciones</h3>
+    <div class="card border-0 shadow-sm p-4 mb-5">
+        <div class="row g-3">
 
-<div class="card shadow-sm p-3">
-    <ul class="list-group list-group-flush">
-        {% for r in ultimas_valoraciones %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
-                    <strong>{{ r.username }}</strong> → {{ r.dog_name }}
-                </span>
-                <span>
-                    ⭐ {{ r.score }}
-                </span>
-            </li>
-        {% empty %}
-            <li class="list-group-item">No hay valoraciones registradas.</li>
-        {% endfor %}
-    </ul>
+            <div class="col-md-6">
+                <a href="{% url 'admin_elementos_list' %}"
+                   class="btn btn-outline-primary w-100 py-3">
+                    Gestionar Elementos
+                </a>
+            </div>
+
+            <div class="col-md-6">
+                <a href="{% url 'categorias_list' %}"
+                   class="btn btn-outline-secondary w-100 py-3">
+                    Gestionar Categorías
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================= -->
+    <!-- ÚLTIMOS USUARIOS -->
+    <!-- ============================= -->
+
+    <h4 class="fw-bold mb-3"> Últimos usuarios registrados</h4>
+
+    <div class="card border-0 shadow-sm mb-5">
+        <ul class="list-group list-group-flush">
+            {% for user in ultimos_usuarios %}
+                <li class="list-group-item">
+                    <strong>{{ user.username }}</strong>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-muted">
+                    No hay usuarios registrados.
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- ============================= -->
+    <!-- ÚLTIMAS VALORACIONES -->
+    <!-- ============================= -->
+
+    <h4 class="fw-bold mb-3"> Últimas valoraciones</h4>
+
+    <div class="card border-0 shadow-sm">
+        <ul class="list-group list-group-flush">
+            {% for r in ultimas_valoraciones %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>{{ r.username }}</strong>
+                        <span class="text-muted">→ {{ r.dog_name }}</span>
+                    </span>
+                    <span class="fw-bold text-warning">
+                        ⭐ {{ r.score }}
+                    </span>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-muted">
+                    No hay valoraciones registradas.
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
 </div>
 
 {% endblock %}

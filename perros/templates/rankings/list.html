@@ -1,55 +1,79 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container py-4">
 
-    <h2>Mis Rankings</h2>
+    <!-- TÍTULO + BOTÓN -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"> Mis Rankings</h2>
 
-    <a href="{% url 'create_ranking' %}" class="btn btn-primary mb-3">
-        + Nuevo Ranking
-    </a>
+        <a href="{% url 'create_ranking' %}" class="btn btn-primary">
+            + Nuevo Ranking
+        </a>
+    </div>
 
-    <ul class="list-group">
-        {% for r in rankings %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+    {% if rankings %}
+        <div class="row g-4">
 
-                <div>
-                    <strong>{{ r.name }}</strong><br>
-                    <small class="text-muted">
-                        {{ r.total_dogs }} elementos
-                    </small>
+            {% for r in rankings %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <div class="card-body d-flex flex-column">
+
+                            <!-- INFO -->
+                            <div class="mb-3">
+                                <h5 class="fw-bold">{{ r.name }}</h5>
+                                <small class="text-muted">
+                                    {{ r.total_dogs }} elementos
+                                </small>
+                            </div>
+
+                            <!-- BOTONES -->
+                            <div class="mt-auto d-flex gap-2">
+
+                                <a href="{% url 'ranking_detail' r.id %}"
+                                   class="btn btn-sm btn-primary w-100">
+                                    Ver
+                                </a>
+
+                                <a href="{% url 'editar_ranking' r.id %}"
+                                   class="btn btn-sm btn-outline-secondary w-100">
+                                    Editar
+                                </a>
+
+                            </div>
+
+                            <form method="POST"
+                                  action="{% url 'delete_ranking' r.id %}"
+                                  class="mt-2">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger w-100">
+                                    Eliminar
+                                </button>
+                            </form>
+
+                        </div>
+
+                    </div>
                 </div>
+            {% endfor %}
 
-                <div class="d-flex gap-2">
+        </div>
 
-                    <a href="{% url 'ranking_detail' r.id %}"
-                       class="btn btn-sm btn-primary">
-                        Ver
-                    </a>
+    {% else %}
 
-                    <a href="{% url 'editar_ranking' r.id %}"
-                       class="btn btn-sm btn-outline-secondary">
-                        Editar
-                    </a>
+        <div class="card border-0 shadow-sm text-center p-5">
+            <h5 class="text-muted">No tienes rankings todavía</h5>
+            <p class="text-muted mb-4">
+                Crea tu primer ranking personalizado.
+            </p>
+            <a href="{% url 'create_ranking' %}" class="btn btn-primary">
+                Crear Ranking
+            </a>
+        </div>
 
-                    <form method="POST"
-                          action="{% url 'delete_ranking' r.id %}"
-                          style="display:inline;">
-                        {% csrf_token %}
-                        <button class="btn btn-sm btn-outline-danger">
-                            Eliminar
-                        </button>
-                    </form>
-
-                </div>
-
-            </li>
-        {% empty %}
-            <li class="list-group-item">
-                No tienes rankings todavía.
-            </li>
-        {% endfor %}
-    </ul>
+    {% endif %}
 
 </div>
 {% endblock %}

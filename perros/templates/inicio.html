@@ -5,210 +5,218 @@
 
 {% block content %}
 
-<div class="bg-white p-4 rounded shadow-sm">
+    <div class="bg-white p-4 rounded shadow-sm">
 
-    <div class="row">
+        <div class="row">
 
-        <!-- ===================== -->
-        <!-- COLUMNA FILTROS -->
-        <!-- ===================== -->
+            <!-- ===================== -->
+            <!-- COLUMNA FILTROS -->
+            <!-- ===================== -->
 
-        <div class="col-md-3">
+            <div class="col-md-3">
 
-            <form method="GET">
+                <form method="GET">
 
-                <!-- BUSCADOR -->
-                <div class="mb-3">
-                    <input type="text"
-                           name="search"
-                           class="form-control"
-                           placeholder="Buscar por nombre..."
-                           value="{{ request.GET.search }}">
-                </div>
-
-                <!-- ORIGEN -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Origen</label>
-                    <select name="origin" class="form-select">
-                        <option value="">Todos</option>
-                        {% for o in origenes %}
-                            <option value="{{ o }}"
-                                    {% if request.GET.origin == o %}selected{% endif %}>
-                                {{ o }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- GRUPO -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Grupo</label>
-                    <select name="group" class="form-select">
-                        <option value="">Todos</option>
-                        {% for g in grupos %}
-                            <option value="{{ g }}"
-                                    {% if request.GET.group == g %}selected{% endif %}>
-                                {{ g }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- ESPERANZA DE VIDA -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Esperanza de vida</label>
-
-                    {% for v in vidas %}
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="radio"
-                                   name="life"
-                                   value="{{ v }}"
-                                   {% if request.GET.life == v %}checked{% endif %}>
-                            <label class="form-check-label">
-                                {{ v }}
-                            </label>
-                        </div>
-                    {% endfor %}
-
-                    <div class="form-check mt-2">
-                        <input class="form-check-input"
-                               type="radio"
-                               name="life"
-                               value=""
-                               {% if not request.GET.life %}checked{% endif %}>
-                        <label class="form-check-label">
-                            Todos
-                        </label>
+                    <!-- BUSCADOR -->
+                    <div class="mb-3">
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="Buscar por nombre..."
+                               value="{{ request.GET.search }}">
                     </div>
-                </div>
 
-                <!-- TEMPERAMENTO -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Temperamento</label>
+                    <!-- ORIGEN -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Origen</label>
+                        <select name="origin" class="form-select">
+                            <option value="">Todos</option>
+                            {% for o in origenes %}
+                                <option value="{{ o }}"
+                                        {% if request.GET.origin == o %}selected{% endif %}>
+                                    {{ o }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                    {% for t in temperamentos %}
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="temperament"
-                                   value="{{ t }}"
-                                   {% if request.GET.temperament == t %}checked{% endif %}>
-                            <label class="form-check-label">
-                                {{ t }}
-                            </label>
-                        </div>
-                    {% endfor %}
-                </div>
+                    <!-- GRUPO -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Grupo</label>
+                        <select name="group" class="form-select">
+                            <option value="">Todos</option>
+                            {% for g in grupos %}
+                                <option value="{{ g }}"
+                                        {% if request.GET.group == g %}selected{% endif %}>
+                                    {{ g }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <button type="submit" class="btn btn-primary w-100 mb-3">
-                    Aplicar filtros
-                </button>
+                    <!-- ESPERANZA DE VIDA AGRUPADA -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Esperanza de vida</label>
 
-            </form>
+                        <select name="life" class="form-select">
+                            <option value="">Todos</option>
 
-            <!-- ===================== -->
-            <!-- BOTÓN RANKING GLOBAL -->
-            <!-- ===================== -->
+                            <option value="6"
+                                    {% if request.GET.life == "6" %}selected{% endif %}>
+                                6–8 años
+                            </option>
 
-            <a href="{% url 'ranking_global' %}?group={{ request.GET.group }}&origin={{ request.GET.origin }}&life={{ request.GET.life }}"
-               class="btn btn-outline-dark w-100">
-                Ver Ranking Global
-            </a>
+                            <option value="8"
+                                    {% if request.GET.life == "8" %}selected{% endif %}>
+                                8–10 años
+                            </option>
 
-        </div>
+                            <option value="10"
+                                    {% if request.GET.life == "10" %}selected{% endif %}>
+                                10–12 años
+                            </option>
 
-        <!-- ===================== -->
-        <!-- COLUMNA GRID -->
-        <!-- ===================== -->
+                            <option value="12"
+                                    {% if request.GET.life == "12" %}selected{% endif %}>
+                                12–14 años
+                            </option>
 
-        <div class="col-md-9">
+                            <option value="14"
+                                    {% if request.GET.life == "14" %}selected{% endif %}>
+                                14+ años
+                            </option>
 
-            <div class="row">
+                        </select>
+                    </div>
 
-                {% for perro in page_obj %}
-                    <div class="col-md-4 mb-4">
 
-                        <div class="card h-100 text-center">
 
-                            <a href="{% url 'detalle_perro' perro.code %}">
-                                <img src="{{ perro.image_url }}"
-                                     class="card-img-top img-perro"
-                                     alt="{{ perro.name }}">
-                            </a>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Temperamento</label>
 
-                            <div class="card-body">
-                                <h5 class="card-title">{{ perro.name }}</h5>
+                        {% for t in temperamentos %}
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="temperament"
+                                       value="{{ t }}"
+                                       {% if t in selected_temperaments %}checked{% endif %}>
+                                <label class="form-check-label">
+                                    {{ t }}
+                                </label>
                             </div>
-
-                        </div>
-
+                        {% endfor %}
                     </div>
-                {% empty %}
-                    <div class="col-12">
-                        <div class="alert alert-warning text-center">
-                            No se han encontrado resultados.
-                        </div>
-                    </div>
-                {% endfor %}
+
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3">
+                        Aplicar filtros
+                    </button>
+
+                </form>
+
+                <!-- ===================== -->
+                <!-- BOTÓN RANKING GLOBAL -->
+                <!-- ===================== -->
+
+                <a href="{% url 'ranking_global' %}?group={{ request.GET.group }}&origin={{ request.GET.origin }}&life={{ request.GET.life }}"
+                   class="btn btn-outline-dark w-100">
+                    Ver Ranking Global
+                </a>
 
             </div>
 
             <!-- ===================== -->
-            <!-- PAGINACIÓN -->
+            <!-- COLUMNA GRID -->
             <!-- ===================== -->
 
-            <nav aria-label="Paginación perros">
-                <ul class="pagination justify-content-center">
+            <div class="col-md-9">
 
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link"
-                               href="?page={{ page_obj.previous_page_number }}&search={{ request.GET.search }}&origin={{ request.GET.origin }}&group={{ request.GET.group }}&life={{ request.GET.life }}">
-                                Anterior
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">Anterior</span>
-                        </li>
-                    {% endif %}
+                <div class="row">
 
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% else %}
-                            <li class="page-item">
-                                <a class="page-link"
-                                   href="?page={{ num }}&search={{ request.GET.search }}&origin={{ request.GET.origin }}&group={{ request.GET.group }}&life={{ request.GET.life }}">
-                                    {{ num }}
+                    {% for perro in page_obj %}
+                        <div class="col-md-4 mb-4">
+
+                            <div class="card h-100 text-center">
+
+                                <a href="{% url 'detalle_perro' perro.code %}">
+                                    <img src="{{ perro.image_url }}"
+                                         class="card-img-top img-perro"
+                                         alt="{{ perro.name }}">
                                 </a>
-                            </li>
-                        {% endif %}
+
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ perro.name }}</h5>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    {% empty %}
+                        <div class="col-12">
+                            <div class="alert alert-warning text-center">
+                                No se han encontrado resultados.
+                            </div>
+                        </div>
                     {% endfor %}
 
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link"
-                               href="?page={{ page_obj.next_page_number }}&search={{ request.GET.search }}&origin={{ request.GET.origin }}&group={{ request.GET.group }}&life={{ request.GET.life }}">
-                                Siguiente
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">Siguiente</span>
-                        </li>
-                    {% endif %}
+                </div>
 
-                </ul>
-            </nav>
+                <!-- ===================== -->
+                <!-- PAGINACIÓN -->
+                <!-- ===================== -->
+
+                <nav aria-label="Paginación perros">
+                    <ul class="pagination justify-content-center">
+
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.previous_page_number }}&search={{ request.GET.search }}&origin={{ request.GET.origin }}&group={{ request.GET.group }}&life={{ request.GET.life }}">
+                                    Anterior
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Anterior</span>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ num }}&search={{ request.GET.search }}&origin={{ request.GET.origin }}&group={{ request.GET.group }}&life={{ request.GET.life }}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.next_page_number }}&search={{ request.GET.search }}&origin={{ request.GET.origin }}&group={{ request.GET.group }}&life={{ request.GET.life }}">
+                                    Siguiente
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Siguiente</span>
+                            </li>
+                        {% endif %}
+
+                    </ul>
+                </nav>
+
+            </div>
 
         </div>
 
     </div>
-
-</div>
 
 {% endblock %}

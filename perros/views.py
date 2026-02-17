@@ -16,7 +16,6 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.models import User
 
-
 from perros.forms import RegistroForm, LoginForm
 from perros.models import *
 
@@ -31,10 +30,6 @@ values_col = db["category_values"]
 category_values_col = db["category_values"]
 ratings_col = db["ratings"]
 rankings_col = db["rankings"]
-
-
-
-
 
 
 # ==============================
@@ -63,7 +58,8 @@ def inicio(request):
     origin = request.GET.get("origin")
     group = request.GET.get("group")
     life_span = request.GET.get("life")
-    temperament = request.GET.get("temperament")
+    temperaments = request.GET.getlist("temperament")
+    selected_temperaments = temperaments  # 👈 NECESARIO
 
     # ==============================
     # BUSCADOR POR NOMBRE
@@ -71,7 +67,7 @@ def inicio(request):
     if search:
         query["name"] = {
             "$regex": search,
-            "$options": "i"   # Insensible a mayúsculas
+            "$options": "i"
         }
 
     # ==============================
@@ -84,10 +80,15 @@ def inicio(request):
         query["breed_group"] = group
 
     if life_span:
-        query["life_span_category"] = life_span
+        query["life_span"] = {
+            "$regex": f"^{life_span}"
+        }
 
-    if temperament:
-        query["temperaments"] = temperament
+    if temperaments:
+        query["temperament"] = {
+            "$regex": "|".join(temperaments),
+            "$options": "i"
+        }
 
     perros = list(dogs_col.find(query, {"_id": 0}))
 
@@ -98,8 +99,15 @@ def inicio(request):
     # Valores únicos para filtros
     origenes = sorted(dogs_col.distinct("origin"))
     grupos = sorted(dogs_col.distinct("breed_group"))
-    vidas = sorted(dogs_col.distinct("life_span_category"))
-    temperamentos = sorted(dogs_col.distinct("temperaments"))
+    vidas = sorted(dogs_col.distinct("life_span"))
+    temperamentos = sorted(
+        set(
+            t.strip()
+            for dog in dogs_col.find({}, {"temperament": 1})
+            if dog.get("temperament")
+            for t in dog["temperament"].split(",")
+        )
+    )
 
     return render(request, "inicio.html", {
         "page_obj": page_obj,
@@ -107,8 +115,8 @@ def inicio(request):
         "grupos": grupos,
         "vidas": vidas,
         "temperamentos": temperamentos,
+        "selected_temperaments": selected_temperaments,
     })
-
 
 
 # ==============================
@@ -129,11 +137,19 @@ def get_user_rating(user, dog_code):
 # ==============================
 
 def detalle_perro(request, code):
-
     perro = dogs_col.find_one({"code": code}, {"_id": 0})
 
     if not perro:
         return render(request, "404.html", status=404)
+
+    # ==============================
+    # PREPARAR TEMPERAMENTOS
+    # ==============================
+    temperamento_lista = []
+    if perro.get("temperament"):
+        temperamento_lista = [
+            t.strip() for t in perro["temperament"].split(",")
+        ]
 
     # ==============================
     # ESTADÍSTICAS DE VALORACIONES
@@ -182,6 +198,16 @@ def detalle_perro(request, code):
     for r in ratings:
         r["username"] = user_map.get(r["user_id"], "Usuario")
 
+    return render(request, "detalle_perro.html", {
+        "perro": perro,
+        "avg_rating": avg_rating,
+        "total_ratings": total_ratings,
+        "user_rating": user_rating,
+        "ratings": ratings,
+        "temperamento_lista": temperamento_lista,
+    })
+
+
     # ==============================
     # ELIMINAR VALORACIÓN
     # ==============================
@@ -218,15 +244,11 @@ def detalle_perro(request, code):
     })
 
 
-
-
-
 # ==============================
 # VALORACION
 # ==============================
-#@login_required
+# @login_required
 def rate_dog(request, code):
-
     if request.method != "POST":
         return redirect("detalle_perro", code=code)
 
@@ -277,7 +299,6 @@ def rate_dog(request, code):
 @login_required
 @require_POST
 def delete_rating(request, code):
-
     ratings_col.delete_one({
         "user_id": request.user.id,
         "dog_code": code
@@ -306,14 +327,11 @@ def login_usuario(request):
     if request.method == "POST":
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
-            username = form.cleaned_data["username"]
-            password = form.cleaned_data["password"]
-            usuario = authenticate(request, username=username, password=password)
-            if usuario:
-                login(request, usuario)
-                return redirect("/")
+            login(request, form.get_user())
+            return redirect("inicio")
     else:
         form = LoginForm()
+
     return render(request, "usuarios/login.html", {"form": form})
 
 
@@ -372,6 +390,7 @@ def subir_fichero(request):
 
     return redirect("cargar_fichero")
 
+
 # ==============================
 # CATEGORÍAS (ADMIN - MONGO)
 # ==============================
@@ -416,7 +435,6 @@ def categoria_create(request):
     return render(request, "categorias/form.html")
 
 
-
 # ==============================
 # CATEGORÍAS MOSTRAR VALORES
 # ==============================
@@ -450,6 +468,7 @@ def category_values_list(request, category_id):
             "values": values
         }
     )
+
 
 # ==============================
 #    ACTUALIZAR CATEGORÍAS
@@ -485,6 +504,7 @@ def categoria_update(request, category_id):
         {"categoria": categoria}
     )
 
+
 # ==============================
 #     BORRAR CATEGORÍAS
 # ==============================
@@ -506,12 +526,12 @@ def categoria_delete(request, category_id):
 
     return redirect("categorias_list")
 
+
 # ==============================
 #   CREAR VALORES CATEGORÍAS
 # ==============================
 @user_passes_test(is_admin)
 def category_value_create(request, category_id):
-
     category_doc = categories_col.find_one({"_id": ObjectId(category_id)})
 
     if not category_doc:
@@ -606,10 +626,8 @@ def category_value_update(request, value_id):
     )
 
 
-
 @user_passes_test(is_admin)
 def admin_elementos_list(request):
-
     perros = list(dogs_col.find({}, {"_id": 0}).sort("code", 1))
 
     return render(
@@ -624,7 +642,6 @@ def admin_elementos_list(request):
 # ==============================
 @user_passes_test(is_admin)
 def admin_elemento_create(request):
-
     if request.method == "POST":
         name = request.POST.get("name")
         image_url = request.POST.get("image_url")
@@ -657,7 +674,6 @@ def admin_elemento_create(request):
 # ==============================
 @user_passes_test(is_admin)
 def admin_elemento_update(request, code):
-
     perro = dogs_col.find_one({"code": int(code)})
 
     if not perro:
@@ -692,13 +708,11 @@ def admin_elemento_update(request, code):
     })
 
 
-
 # ==============================
 # ADMIN - ELIMINAR ELEMENTO
 # ==============================
 @user_passes_test(is_admin)
 def admin_elemento_delete(request, code):
-
     dogs_col.delete_one({"code": int(code)})
 
     messages.success(request, "Elemento eliminado correctamente.")
@@ -712,20 +726,29 @@ def admin_elemento_delete(request, code):
 def create_ranking(request):
     if request.method == "POST":
         name = request.POST.get("name")
+        category_slug = request.POST.get("category_slug")
 
-        if name:
-            result = rankings_col.insert_one({
-                "user_id": request.user.id,
-                "name": name,
-                "dogs": []
-            })
+        if not name:
+            messages.error(request, "Debes indicar nombre.")
+            return redirect("create_ranking")
 
-            # Redirigir directamente a editar ranking
-            return redirect("editar_ranking", ranking_id=str(result.inserted_id))
+        rankings_col.insert_one({
+            "user_id": request.user.id,
+            "name": name,
+            "category_slug": category_slug if category_slug else None,
+            "dogs": []
+        })
 
         return redirect("my_rankings")
 
-    return render(request, "rankings/create.html")
+    # Obtener categorías reales creadas por admin
+    categorias = list(categories_col.find({}, {"_id": 0, "slug": 1, "name": 1}))
+
+    return render(
+        request,
+        "rankings/create.html",
+        {"categorias": categorias}
+    )
 
 
 # ==============================
@@ -746,60 +769,101 @@ def my_rankings(request):
         "rankings": rankings
     })
 
+
 # ==============================
 # AÑADIR PERRO A RANKING
 # ==============================
 @login_required
 def add_to_ranking(request, code):
+    if request.method != "POST":
+        return redirect("my_rankings")
 
-    if request.method == "POST":
-        ranking_id = request.POST.get("ranking_id")
+    ranking_id = request.POST.get("ranking_id")
 
-        ranking = rankings_col.find_one({
-            "_id": ObjectId(ranking_id),
-            "user_id": request.user.id
-        })
+    ranking = rankings_col.find_one({
+        "_id": ObjectId(ranking_id),
+        "user_id": request.user.id
+    })
 
-        if not ranking:
-            messages.error(request, "Ranking no encontrado o no autorizado.")
-            return redirect("my_rankings")
+    if not ranking:
+        messages.error(request, "Ranking no encontrado o no autorizado.")
+        return redirect("my_rankings")
 
-        # Limitar a máximo 10 perros
-        if len(ranking.get("dogs", [])) >= 10:
-            messages.warning(request, "Solo puedes tener máximo 10 perros en el ranking.")
-            return redirect(f"/ranking/{ranking_id}/editar/")
+    # ==============================
+    # Comprobar que el perro existe
+    # ==============================
 
-        # Evitar duplicados
-        already_exists = any(
-            dog["dog_code"] == code
-            for dog in ranking.get("dogs", [])
-        )
+    perro = dogs_col.find_one({"code": int(code)}, {"_id": 0})
 
-        if not already_exists:
-            position = len(ranking.get("dogs", [])) + 1
+    if not perro:
+        messages.error(request, "Perro no encontrado.")
+        return redirect("editar_ranking", ranking_id=ranking_id)
 
-            rankings_col.update_one(
-                {"_id": ObjectId(ranking_id)},
-                {
-                    "$push": {
-                        "dogs": {
-                            "dog_code": code,
-                            "position": position
-                        }
-                    }
+    # ==============================
+    # Si el ranking tiene grupo, comprobar coincidencia
+    # ==============================
+
+    if ranking.get("group"):
+        if perro.get("breed_group") != ranking.get("group"):
+            messages.error(request, "Este perro no pertenece al grupo del ranking.")
+            return redirect("editar_ranking", ranking_id=ranking_id)
+
+    # ==============================
+    # Comprobar que el usuario lo ha valorado
+    # ==============================
+
+    user_rating = ratings_col.find_one({
+        "user_id": request.user.id,
+        "dog_code": int(code)
+    })
+
+    if not user_rating:
+        messages.error(request, "Solo puedes añadir perros que hayas valorado.")
+        return redirect("editar_ranking", ranking_id=ranking_id)
+
+    # ==============================
+    # Limitar a máximo 10
+    # ==============================
+
+    if len(ranking.get("dogs", [])) >= 10:
+        messages.warning(request, "Máximo 10 perros por ranking.")
+        return redirect("editar_ranking", ranking_id=ranking_id)
+
+    # ==============================
+    # Evitar duplicados
+    # ==============================
+
+    already_exists = any(
+        dog["dog_code"] == int(code)
+        for dog in ranking.get("dogs", [])
+    )
+
+    if already_exists:
+        return redirect("editar_ranking", ranking_id=ranking_id)
+
+    # ==============================
+    # Insertar
+    # ==============================
+
+    position = len(ranking.get("dogs", [])) + 1
+
+    rankings_col.update_one(
+        {"_id": ObjectId(ranking_id)},
+        {
+            "$push": {
+                "dogs": {
+                    "dog_code": int(code),
+                    "position": position
                 }
-            )
+            }
+        }
+    )
 
-        return redirect(f"/ranking/{ranking_id}/editar/#dog-{code}")
-
-    return redirect("my_rankings")
-
-
+    return redirect(f"/ranking/{ranking_id}/editar/#dog-{code}")
 
 
-#@login_required
+@login_required
 def ranking_detail(request, ranking_id):
-
     ranking = rankings_col.find_one({
         "_id": ObjectId(ranking_id),
         "user_id": request.user.id
@@ -810,7 +874,6 @@ def ranking_detail(request, ranking_id):
 
     dogs = []
 
-    # Ordenar por posición
     sorted_dogs = sorted(
         ranking.get("dogs", []),
         key=lambda x: x.get("position", 0)
@@ -824,19 +887,21 @@ def ranking_detail(request, ranking_id):
         if dog:
             dogs.append(dog)
 
+    context = {
+        "ranking": ranking,
+        "dogs": dogs,
+        "group": ranking.get("group")
+    }
+
     return render(
         request,
         "rankings/detail.html",
-        {
-            "ranking": ranking,
-            "dogs": dogs
-        }
+        context
     )
 
 
 def ranking_por_grupo(request, group_name):
-
-    #Obtener perros del grupo
+    # Obtener perros del grupo
     dogs = list(dogs_col.find(
         {"breed_group": group_name},
         {"_id": 0}
@@ -850,7 +915,7 @@ def ranking_por_grupo(request, group_name):
 
     dog_codes = [dog["code"] for dog in dogs]
 
-    #Calcular medias
+    # Calcular medias
     ranking = list(ratings_col.aggregate([
         {
             "$match": {
@@ -867,7 +932,7 @@ def ranking_por_grupo(request, group_name):
         {"$sort": {"avg_score": -1}}
     ]))
 
-    #Añadir nombre de perro
+    # Añadir nombre de perro
     dog_map = {dog["code"]: dog["name"] for dog in dogs}
 
     for item in ranking:
@@ -882,8 +947,8 @@ def ranking_por_grupo(request, group_name):
 
 from django.db.models import Q
 
-def ranking_global(request):
 
+def ranking_global(request):
     group = request.GET.get("group")
     origin = request.GET.get("origin")
     life = request.GET.get("life")
@@ -960,9 +1025,7 @@ def ranking_global(request):
     })
 
 
-
 def ranking_categoria(request, group_name):
-
     # Buscar perros de ese grupo
     perros_grupo = list(dogs_col.find(
         {"breed_group": group_name},
@@ -1018,38 +1081,104 @@ def estadisticas_globales(request):
     dogs_collection = db.dogs
 
     # ==============================
+    # FILTRO OPCIONAL POR GRUPO
+    # ==============================
+
+    group_filter = request.GET.get("group")
+
+    match_stage = {}
+
+    if group_filter:
+        match_stage = {
+            "$lookup": {
+                "from": "dogs",
+                "localField": "dog_code",
+                "foreignField": "code",
+                "as": "dog"
+            }
+        }
+
+    # ==============================
     # TOTALES
     # ==============================
+
     total_perros = dogs_collection.count_documents({})
     total_valoraciones = ratings_col.count_documents({})
 
     # ==============================
-    # MEDIA GLOBAL
+    # MEDIA GLOBAL (O FILTRADA)
     # ==============================
-    media_global_data = list(ratings_col.aggregate([
-        {"$group": {"_id": None, "media": {"$avg": "$score"}}}
-    ]))
-    media_global = round(media_global_data[0]["media"], 2) if media_global_data else 0
+
+    pipeline_media = []
+
+    if group_filter:
+        pipeline_media = [
+            {
+                "$lookup": {
+                    "from": "dogs",
+                    "localField": "dog_code",
+                    "foreignField": "code",
+                    "as": "dog"
+                }
+            },
+            {"$unwind": "$dog"},
+            {"$match": {"dog.breed_group": group_filter}},
+            {"$group": {"_id": None, "media": {"$avg": "$score"}}}
+        ]
+    else:
+        pipeline_media = [
+            {"$group": {"_id": None, "media": {"$avg": "$score"}}}
+        ]
+
+    media_data = list(ratings_col.aggregate(pipeline_media))
+    media_global = round(media_data[0]["media"], 2) if media_data else 0
 
     # ==============================
-    # TOP MEJOR VALORADOS
+    # TOP 5 MEJOR VALORADOS
     # ==============================
-    top_mejor_valorados = list(ratings_col.aggregate([
-        {
-            "$group": {
-                "_id": "$dog_code",
-                "avg_score": {"$avg": "$score"},
-                "total": {"$sum": 1}
-            }
-        },
-        {"$sort": {"avg_score": -1}},
-        {"$limit": 5}
-    ]))
+
+    pipeline_top = []
+
+    if group_filter:
+        pipeline_top = [
+            {
+                "$lookup": {
+                    "from": "dogs",
+                    "localField": "dog_code",
+                    "foreignField": "code",
+                    "as": "dog"
+                }
+            },
+            {"$unwind": "$dog"},
+            {"$match": {"dog.breed_group": group_filter}},
+            {
+                "$group": {
+                    "_id": "$dog_code",
+                    "avg_score": {"$avg": "$score"},
+                    "total": {"$sum": 1}
+                }
+            },
+            {"$sort": {"avg_score": -1}},
+            {"$limit": 5}
+        ]
+    else:
+        pipeline_top = [
+            {
+                "$group": {
+                    "_id": "$dog_code",
+                    "avg_score": {"$avg": "$score"},
+                    "total": {"$sum": 1}
+                }
+            },
+            {"$sort": {"avg_score": -1}},
+            {"$limit": 5}
+        ]
+
+    top_mejor_valorados = list(ratings_col.aggregate(pipeline_top))
 
     for dog in top_mejor_valorados:
         dog["dog_code"] = dog["_id"]
 
-    # Obtener nombres de los perros del Top
     codigos = [dog["dog_code"] for dog in top_mejor_valorados]
 
     perros_top = list(dogs_collection.find(
@@ -1057,69 +1186,62 @@ def estadisticas_globales(request):
         {"_id": 0, "code": 1, "name": 1}
     ))
 
-    # Crear diccionario code -> name
     mapa_nombres = {perro["code"]: perro["name"] for perro in perros_top}
 
-    # Añadir nombre a cada elemento del top
     for dog in top_mejor_valorados:
         dog["name"] = mapa_nombres.get(dog["dog_code"], "Sin nombre")
 
     # ==============================
-    # MEDIA POR GRUPO
+    # MEDIA POR GRUPO (SI NO HAY FILTRO)
     # ==============================
-    media_por_grupo = list(ratings_col.aggregate([
-        {
-            "$lookup": {
-                "from": "dogs",
-                "localField": "dog_code",
-                "foreignField": "code",
-                "as": "dog"
-            }
-        },
-        {"$unwind": "$dog"},
-        {
-            "$group": {
-                "_id": "$dog.group_id",
-                "media": {"$avg": "$score"},
-                "total": {"$sum": 1}
-            }
-        },
-        {"$sort": {"media": -1}}
-    ]))
+
+    media_por_grupo = []
+
+    if not group_filter:
+        media_por_grupo = list(ratings_col.aggregate([
+            {
+                "$lookup": {
+                    "from": "dogs",
+                    "localField": "dog_code",
+                    "foreignField": "code",
+                    "as": "dog"
+                }
+            },
+            {"$unwind": "$dog"},
+            {
+                "$group": {
+                    "_id": "$dog.breed_group",
+                    "media": {"$avg": "$score"},
+                    "total": {"$sum": 1}
+                }
+            },
+            {"$sort": {"media": -1}}
+        ]))
+
+        for grupo in media_por_grupo:
+            grupo["group_name"] = grupo["_id"]
+
+    # ==============================
+    # GRUPOS DISPONIBLES (PARA FILTRO)
+    # ==============================
+
+    grupos_disponibles = sorted(dogs_collection.distinct("breed_group"))
 
     context = {
         "total_perros": total_perros,
         "total_valoraciones": total_valoraciones,
         "media_global": media_global,
         "top_mejor_valorados": top_mejor_valorados,
-        "media_por_grupo": media_por_grupo
+        "media_por_grupo": media_por_grupo,
+        "grupos_disponibles": grupos_disponibles,
+        "group_filter": group_filter
     }
-
-    # Obtener IDs de grupos
-    group_ids = [grupo["_id"] for grupo in media_por_grupo]
-
-    # Buscar nombres en category_values
-    category_values_col = db.category_values
-
-    grupos = list(category_values_col.find(
-        {"id": {"$in": group_ids}},
-        {"_id": 0, "id": 1, "value": 1}
-    ))
-
-    # Crear mapa id -> nombre
-    mapa_grupos = {grupo["id"]: grupo["value"] for grupo in grupos}
-
-    # Añadir nombre a cada grupo
-    for grupo in media_por_grupo:
-        grupo["group_id"] = grupo["_id"]
-        grupo["group_name"] = mapa_grupos.get(grupo["_id"], "Sin grupo")
 
     return render(request, "estadisticas.html", context)
 
 
-#PANEL ADMIN
+# PANEL ADMIN
 def panel_admin(request):
-
     # Verificar acceso solo admin
     if not request.user.is_authenticated or request.user.role != "admin":
         messages.error(request, "Acceso no autorizado.")
@@ -1183,18 +1305,20 @@ def panel_admin(request):
     return render(request, "panel_admin.html", context)
 
 
-#EDITAR RANKING
+# EDITAR RANKING
 @login_required
 def editar_ranking(request, ranking_id):
+    # ==============================
+    # BUSCAR RANKING DEL USUARIO
+    # ==============================
 
-    # Buscar ranking del usuario
     ranking = rankings_col.find_one({
         "_id": ObjectId(ranking_id),
         "user_id": request.user.id
     })
 
     if not ranking:
-        messages.error(request, "Ranking no encontrado o no autorizado.")
+        messages.error(request, "Ranking no encontrado.")
         return redirect("my_rankings")
 
     # ==============================
@@ -1206,44 +1330,57 @@ def editar_ranking(request, ranking_id):
         {"dog_code": 1, "_id": 0}
     ))
 
-    rated_dog_codes = [r["dog_code"] for r in user_ratings]
+    rated_codes = [r["dog_code"] for r in user_ratings]
 
-    # Solo traer esos perros
+    # Traer TODOS los perros que el usuario ha valorado
     perros = list(dogs_col.find(
-        {"code": {"$in": rated_dog_codes}},
+        {"code": {"$in": rated_codes}},
         {"_id": 0}
     ))
 
-    # Obtener códigos ya añadidos al ranking
-    dog_codes_in_ranking = [
+    # ==============================
+    # MAPEAR NOMBRES PARA LOS YA AÑADIDOS
+    # ==============================
+
+    dog_codes_ranking = [
         item["dog_code"]
         for item in ranking.get("dogs", [])
     ]
 
-    ranking_id_str = str(ranking["_id"])
+    dogs_data = list(dogs_col.find(
+        {"code": {"$in": dog_codes_ranking}},
+        {"_id": 0, "code": 1, "name": 1}
+    ))
+
+    dog_map = {dog["code"]: dog["name"] for dog in dogs_data}
+
+    # Añadir nombre a cada elemento del ranking
+    for item in ranking.get("dogs", []):
+        item["name"] = dog_map.get(item["dog_code"], "Desconocido")
+
+    # ==============================
+    # CONTEXTO
+    # ==============================
 
     context = {
         "ranking": ranking,
-        "ranking_id": ranking_id_str,
+        "ranking_id": str(ranking["_id"]),
         "perros": perros,
-        "dog_codes_in_ranking": dog_codes_in_ranking
+        "dog_codes_in_ranking": dog_codes_ranking
     }
 
     return render(request, "rankings/editar_ranking.html", context)
 
 
-
 ##ELIMINAR DEL RANKING
 @login_required
 def remove_from_ranking(request, code):
-
     if request.method == "POST":
         ranking_id = request.POST.get("ranking_id")
 
         ranking = rankings_col.find_one({"_id": ObjectId(ranking_id)})
 
         if ranking and ranking["user_id"] == request.user.id:
-
             rankings_col.update_one(
                 {"_id": ObjectId(ranking_id)},
                 {
@@ -1257,10 +1394,10 @@ def remove_from_ranking(request, code):
 
     return redirect("my_rankings")
 
-#ELIMINAR RANKING
+
+# ELIMINAR RANKING
 @login_required
 def delete_ranking(request, ranking_id):
-
     ranking = rankings_col.find_one({
         "_id": ObjectId(ranking_id),
         "user_id": request.user.id
@@ -1271,10 +1408,10 @@ def delete_ranking(request, ranking_id):
 
     return redirect("my_rankings")
 
-#ACTUALIZAR ORDEN RANKING
+
+# ACTUALIZAR ORDEN RANKING
 @login_required
 def update_ranking_order(request, ranking_id):
-
     if request.method == "POST":
         ranking = rankings_col.find_one({
             "_id": ObjectId(ranking_id),
