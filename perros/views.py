@@ -67,6 +67,9 @@ def listar_perros(request):
 
 def inicio(request):
 
+    print("AUTH:", request.user.is_authenticated)
+    print("USER:", request.user)
+
     query = {}
 
     search = request.GET.get("search")
@@ -74,7 +77,7 @@ def inicio(request):
     group = request.GET.get("group")
     life_span = request.GET.get("life")
     temperaments = request.GET.getlist("temperament")
-    selected_temperaments = temperaments  # 👈 NECESARIO
+    selected_temperaments = temperaments  #NECESARIO
 
 
     # -----------------------------------------------------
@@ -137,7 +140,6 @@ def inicio(request):
             for t in dog["temperament"].split(",")
         )
     )
-
 
     # -----------------------------------------------------
     # RENDER
@@ -285,7 +287,7 @@ def detalle_perro(request, code):
 def rate_dog(request, code):
 
     # -----------------------------------------------------
-    # VALIDAR MÉTODO
+    # VALIDAR METODO
     # -----------------------------------------------------
     if request.method != "POST":
         return redirect("detalle_perro", code=code)
@@ -843,6 +845,8 @@ def admin_elemento_create(request):
     return render(request, "admin/elemento_form.html")
 
 
+
+
 # =========================================================
 # ADMIN – EDITAR ELEMENTO
 # =========================================================
@@ -928,7 +932,7 @@ def create_ranking(request):
             messages.error(request, "Debes indicar nombre.")
             return redirect("create_ranking")
 
-        # 🔹 Comprobar si ya existe ranking para esta categoría y usuario
+        # Comprobar si ya existe ranking para esta categoría y usuario
         existing_ranking = rankings_col.find_one({
             "user_id": request.user.id,
             "category_slug": category_slug if category_slug else None
@@ -1014,7 +1018,7 @@ def my_rankings(request):
 def add_to_ranking(request, code):
 
     # -----------------------------------------------------
-    # VALIDAR MÉTODO
+    # VALIDAR METODO
     # -----------------------------------------------------
     if request.method != "POST":
         return redirect("my_rankings")
@@ -1203,7 +1207,7 @@ def ranking_por_grupo(request, group_name):
     ]))
 
     # -----------------------------------------------------
-    # MAPA CODE → NOMBRE
+    # MAPA CODE -> NOMBRE
     # -----------------------------------------------------
     dog_map = {dog["code"]: dog["name"] for dog in dogs}
 
@@ -1216,8 +1220,6 @@ def ranking_por_grupo(request, group_name):
         "ranking": ranking
     })
 
-
-from django.db.models import Q
 
 
 # =========================================================
@@ -1277,7 +1279,7 @@ def ranking_global(request):
     stats = list(ratings_col.aggregate(pipeline))
 
     # -----------------------------------------------------
-    # MAPA CODE → NAME
+    # MAPA CODE -> NAME
     # -----------------------------------------------------
     name_map = {
         dog["code"]: dog["name"]
@@ -1320,7 +1322,6 @@ def ranking_global(request):
 # =========================================================
 # RANKING – POR CATEGORÍA (GRUPO)
 # =========================================================
-
 def ranking_categoria(request, group_name):
 
     # -----------------------------------------------------
@@ -1353,7 +1354,7 @@ def ranking_categoria(request, group_name):
     ]))
 
     # -----------------------------------------------------
-    # MAPA DE PERROS (code → datos)
+    # MAPA DE PERROS (code -> datos)
     # -----------------------------------------------------
     mapa_perros = {p["code"]: p for p in perros_grupo}
 
@@ -1664,7 +1665,7 @@ def editar_ranking(request, ranking_id):
     # -----------------------------------------------------
     query = {"code": {"$in": rated_codes}}
 
-    # 🔥 NUEVO: aplicar filtro si ranking tiene categoría
+    #NUEVO: aplicar filtro si ranking tiene categoría
     if ranking.get("category_slug") and ranking.get("category_value"):
 
         slug = ranking["category_slug"]
