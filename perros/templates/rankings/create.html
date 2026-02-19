@@ -32,11 +32,14 @@
                         </div>
 
                         <!-- CATEGORÍA -->
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label class="form-label fw-semibold">
                                 Categoría (opcional)
                             </label>
-                            <select name="category_slug" class="form-select">
+                            <select name="category_slug"
+                                    id="category-select"
+                                    class="form-select"
+                                    onchange="updateValues()">
                                 <option value="">Libre (sin categoría)</option>
 
                                 {% for c in categorias %}
@@ -47,8 +50,20 @@
                             </select>
 
                             <small class="text-muted">
-                                Si eliges categoría, el ranking quedará asociado a ella.
+                                Si eliges categoría, podrás elegir un valor concreto.
                             </small>
+                        </div>
+
+                        <!-- NUEVO: VALOR DE CATEGORÍA -->
+                        <div class="mb-4" id="value-container" style="display:none;">
+                            <label class="form-label fw-semibold">
+                                Valor de la categoría
+                            </label>
+                            <select name="category_value"
+                                    id="value-select"
+                                    class="form-select">
+                                <option value="">Selecciona un valor</option>
+                            </select>
                         </div>
 
                         <!-- BOTÓN ORIGINAL -->
@@ -67,5 +82,34 @@
     </div>
 
 </div>
+
+<!-- SCRIPT PARA CARGAR VALORES DINÁMICAMENTE -->
+<script>
+    const valoresPorCategoria = {{ valores_por_categoria|safe }};
+
+    function updateValues() {
+        const categorySelect = document.getElementById("category-select");
+        const valueContainer = document.getElementById("value-container");
+        const valueSelect = document.getElementById("value-select");
+
+        const selected = categorySelect.value;
+
+        valueSelect.innerHTML = '<option value="">Selecciona un valor</option>';
+
+        if (!selected || !valoresPorCategoria[selected]) {
+            valueContainer.style.display = "none";
+            return;
+        }
+
+        valoresPorCategoria[selected].forEach(function(value) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value;
+            valueSelect.appendChild(option);
+        });
+
+        valueContainer.style.display = "block";
+    }
+</script>
 
 {% endblock %}

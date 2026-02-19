@@ -405,6 +405,7 @@ def categorias_list(request):
             "slug": cat.get("slug")
         })
 
+
     return render(
         request,
         "categorias/list.html",
@@ -727,28 +728,62 @@ def create_ranking(request):
     if request.method == "POST":
         name = request.POST.get("name")
         category_slug = request.POST.get("category_slug")
+        category_value = request.POST.get("category_value")
 
         if not name:
             messages.error(request, "Debes indicar nombre.")
+            return redirect("create_ranking")
+
+        # 🔹 Comprobar si ya existe ranking para esta categoría y usuario
+        existing_ranking = rankings_col.find_one({
+            "user_id": request.user.id,
+            "category_slug": category_slug if category_slug else None
+        })
+
+        if existing_ranking:
+            messages.error(
+                request,
+                "Ya tienes un ranking creado para esta categoría."
+            )
             return redirect("create_ranking")
 
         rankings_col.insert_one({
             "user_id": request.user.id,
             "name": name,
             "category_slug": category_slug if category_slug else None,
+            "category_value": category_value if category_value else None,
             "dogs": []
         })
 
         return redirect("my_rankings")
 
-    # Obtener categorías reales creadas por admin
-    categorias = list(categories_col.find({}, {"_id": 0, "slug": 1, "name": 1}))
+    # ==============================
+    # GET
+    # ==============================
+
+    categorias = list(
+        categories_col.find({}, {"_id": 0, "slug": 1, "name": 1})
+    )
+
+    #valores agrupados por categoría
+    valores_por_categoria = {}
+
+    for v in category_values_col.find({}, {"_id": 0, "category_slug": 1, "value": 1}):
+        slug = v["category_slug"]
+        if slug not in valores_por_categoria:
+            valores_por_categoria[slug] = []
+        valores_por_categoria[slug].append(v["value"])
 
     return render(
         request,
         "rankings/create.html",
-        {"categorias": categorias}
+        {
+            "categorias": categorias,
+            "valores_por_categoria": valores_por_categoria
+        }
     )
+
+
 
 
 # ==============================
@@ -1308,6 +1343,7 @@ def panel_admin(request):
 # EDITAR RANKING
 @login_required
 def editar_ranking(request, ranking_id):
+
     # ==============================
     # BUSCAR RANKING DEL USUARIO
     # ==============================
@@ -1332,11 +1368,37 @@ def editar_ranking(request, ranking_id):
 
     rated_codes = [r["dog_code"] for r in user_ratings]
 
-    # Traer TODOS los perros que el usuario ha valorado
-    perros = list(dogs_col.find(
-        {"code": {"$in": rated_codes}},
-        {"_id": 0}
-    ))
+    # ==============================
+    # FILTRO BASE
+    # ==============================
+
+    query = {"code": {"$in": rated_codes}}
+
+    # 🔥 NUEVO: aplicar filtro si ranking tiene categoría
+    if ranking.get("category_slug") and ranking.get("category_value"):
+
+        slug = ranking["category_slug"]
+        value = ranking["category_value"]
+
+        if slug == "origen":
+            query["origin"] = value
+
+        elif slug == "grupo":
+            query["breed_group"] = value
+
+        elif slug == "esperanza_de_vida":
+            query["life_span"] = {
+                "$regex": f"^{value}"
+            }
+
+        elif slug == "temperamento":
+            query["temperament"] = {
+                "$regex": value,
+                "$options": "i"
+            }
+
+    # Traer perros filtrados
+    perros = list(dogs_col.find(query, {"_id": 0}))
 
     # ==============================
     # MAPEAR NOMBRES PARA LOS YA AÑADIDOS
@@ -1354,7 +1416,6 @@ def editar_ranking(request, ranking_id):
 
     dog_map = {dog["code"]: dog["name"] for dog in dogs_data}
 
-    # Añadir nombre a cada elemento del ranking
     for item in ranking.get("dogs", []):
         item["name"] = dog_map.get(item["dog_code"], "Desconocido")
 
@@ -1372,22 +1433,44 @@ def editar_ranking(request, ranking_id):
     return render(request, "rankings/editar_ranking.html", context)
 
 
-##ELIMINAR DEL RANKING
+
+#ELIMINAR DEL RANKING
 @login_required
 def remove_from_ranking(request, code):
     if request.method == "POST":
         ranking_id = request.POST.get("ranking_id")
 
-        ranking = rankings_col.find_one({"_id": ObjectId(ranking_id)})
+        ranking = rankings_col.find_one({
+            "_id": ObjectId(ranking_id)
+        })
 
         if ranking and ranking["user_id"] == request.user.id:
+
+            #Eliminar el perro
             rankings_col.update_one(
                 {"_id": ObjectId(ranking_id)},
                 {
                     "$pull": {
-                        "dogs": {"dog_code": code}
+                        "dogs": {"dog_code": int(code)}
                     }
                 }
+            )
+
+            #Obtener ranking actualizado
+            ranking_updated = rankings_col.find_one({
+                "_id": ObjectId(ranking_id)
+            })
+
+            dogs = ranking_updated.get("dogs", [])
+
+            #Recalcular posiciones
+            for index, dog in enumerate(dogs, start=1):
+                dog["position"] = index
+
+            #Guardar nueva lista ordenada
+            rankings_col.update_one(
+                {"_id": ObjectId(ranking_id)},
+                {"$set": {"dogs": dogs}}
             )
 
         return redirect(f"/ranking/{ranking_id}/editar/#dog-{code}")

@@ -142,7 +142,6 @@ h2.card-title {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Mantener el botón con ancho automático (lo único del nuevo estilo) */
 .detalle-card form button {
     width: auto;
 }
